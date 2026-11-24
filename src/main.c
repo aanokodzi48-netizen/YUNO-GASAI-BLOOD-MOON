@@ -1,223 +1,182 @@
 #include <genesis.h>
+#include "resources.h"
 
-#define SCREEN_MIN_X 1
-#define SCREEN_MAX_X 37
+#define FLOOR_Y 166
+#define PLAYER_MIN_X 12
+#define PLAYER_MAX_X 286
+#define ENEMY_COUNT 3
 
-typedef enum
+typedef enum { TITLE, PLAYING, PAUSED, GAME_OVER, WIN } GameState;
+static GameState state = TITLE;
+static Sprite *yunoSprite;
+static Sprite *ninjaSprites[ENEMY_COUNT];
+static s16 playerX = 54;
+static s16 enemyX[ENEMY_COUNT] = {205, 244, 280};
+static u8 enemyAlive[ENEMY_COUNT] = {1,1,1};
+static s16 hp = 3;
+static s16 jumpTimer = 0;
+static u16 animClock = 0, enemyClock = 0, hurtTimer = 0, attackTimer = 0;
+static u16 oldPad = 0;
+
+static const u16 uiPalette[16] = {
+    RGB24_TO_VDPCOLOR(0x080818), RGB24_TO_VDPCOLOR(0x17172E),
+    RGB24_TO_VDPCOLOR(0x30304B), RGB24_TO_VDPCOLOR(0x555575),
+    RGB24_TO_VDPCOLOR(0x7B416E), RGB24_TO_VDPCOLOR(0xA94B78),
+    RGB24_TO_VDPCOLOR(0xE16D9B), RGB24_TO_VDPCOLOR(0xF6A9C4),
+    RGB24_TO_VDPCOLOR(0xF5D9C7), RGB24_TO_VDPCOLOR(0xE9B95F),
+    RGB24_TO_VDPCOLOR(0xA96C43), RGB24_TO_VDPCOLOR(0x613B49),
+    RGB24_TO_VDPCOLOR(0x2A263A), RGB24_TO_VDPCOLOR(0x4D5C78),
+    RGB24_TO_VDPCOLOR(0x8393A8), RGB24_TO_VDPCOLOR(0xFFF0E7)
+};
+
+static void drawBackdrop(void)
 {
-    STATE_TITLE,
-    STATE_PLAYING,
-    STATE_PAUSED,
-    STATE_GAME_OVER,
-    STATE_WIN
-} GameState;
+    VDP_clearTextArea(0,0,40,28);
+    VDP_drawText("TOKYO  /  BLOOD MOON", 10, 1);
+    VDP_drawText("     .          .           .", 2, 4);
+    VDP_drawText("   |###|     |####|      |###|", 2, 7);
+    VDP_drawText("   |###|     |####|      |###|", 2, 8);
+    VDP_drawText("___|###|_____|####|______|###|___", 1, 10);
+    VDP_drawText("     .       ( MOON )       .", 2, 12);
+    VDP_drawText("________________________________________", 0, 22);
+    VDP_drawText("A: PUNCH   C: KICK   B: RUN", 5, 25);
+    VDP_drawText("UP: JUMP   DOWN: CROUCH   START: PAUSE", 1, 27);
+}
 
-static GameState state = STATE_TITLE;
-static s16 playerX = 5;
-static s16 enemyX = 30;
-static s16 playerHP = 3;
-static s16 enemyHP = 3;
-static s16 wavesCleared = 0;
-static s16 jumpFrames = 0;
-static u16 enemyClock = 0;
-static u16 attackCooldown = 0;
-static u16 hurtCooldown = 0;
-static u16 transitionClock = 0;
-static u16 previousPad = 0;
-
-static void drawScene(void)
+static void syncSprites(void)
 {
-    char playerLine[2] = "Y";
-    char enemyLine[2] = "N";
-
-    VDP_clearTextArea(0, 0, 40, 28);
-    VDP_drawText("YUNO GASAI: BLOOD MOON", 7, 1);
-    VDP_drawText("NIGHT STREET - TOKYO", 10, 3);
-
-    VDP_drawText("HP:", 2, 5);
-    if (playerHP >= 3) VDP_drawText("3", 6, 5);
-    else if (playerHP == 2) VDP_drawText("2", 6, 5);
-    else if (playerHP == 1) VDP_drawText("1", 6, 5);
-    else VDP_drawText("0", 6, 5);
-
-    VDP_drawText("NINJA:", 27, 5);
-    if (enemyHP >= 3) VDP_drawText("3", 34, 5);
-    else if (enemyHP == 2) VDP_drawText("2", 34, 5);
-    else if (enemyHP == 1) VDP_drawText("1", 34, 5);
-    else VDP_drawText("0", 34, 5);
-
-    VDP_drawText("  .  *       .       *       .", 2, 9);
-    VDP_drawText("     |       |       |", 2, 11);
-    VDP_drawText("========================================", 0, 22);
-    VDP_drawText("A: PUNCH   C: KICK   B: RUN", 4, 24);
-    VDP_drawText("UP: JUMP   DOWN: CROUCH   START: PAUSE", 1, 26);
-
-    if (jumpFrames > 0)
+    u8 i;
+    SPR_setPosition(yunoSprite, playerX, (jumpTimer > 0) ? FLOOR_Y-28 : FLOOR_Y);
+    SPR_setAnimAndFrame(yunoSprite, 1, (animClock >> 3) & 3);
+    for (i=0;i<ENEMY_COUNT;i++)
     {
-        VDP_drawText("^", playerX, 16);
-        VDP_drawText(playerLine, playerX, 17);
+        SPR_setVisibility(ninjaSprites[i], enemyAlive[i] ? VISIBLE : HIDDEN);
+        SPR_setPosition(ninjaSprites[i], enemyX[i], FLOOR_Y);
+        SPR_setAnimAndFrame(ninjaSprites[i], 1, (animClock >> 4) & 3);
     }
-    else
-    {
-        VDP_drawText(playerLine, playerX, 20);
-    }
+}
 
-    VDP_drawText(enemyLine, enemyX, 20);
-
-    if (wavesCleared > 0)
-    {
-        VDP_drawText("WAVE CLEARED!", 14, 14);
-    }
+static void drawHud(void)
+{
+    char buf[8];
+    sprintf(buf, "%d", hp);
+    VDP_drawText("HP:", 2, 2); VDP_drawText(buf, 6, 2);
+    VDP_drawText("NINJA:", 30, 2);
+    sprintf(buf, "%d", (enemyAlive[0]+enemyAlive[1]+enemyAlive[2]));
+    VDP_drawText(buf, 37, 2);
+    VDP_drawText("YUNO GASAI: BLOOD MOON", 9, 0);
 }
 
 static void resetGame(void)
 {
-    playerX = 5;
-    enemyX = 30;
-    playerHP = 3;
-    enemyHP = 3;
-    wavesCleared = 0;
-    jumpFrames = 0;
-    enemyClock = 0;
-    attackCooldown = 0;
-    hurtCooldown = 0;
-    transitionClock = 0;
-    state = STATE_PLAYING;
+    u8 i;
+    playerX=54; hp=3; jumpTimer=0; animClock=0; enemyClock=0; hurtTimer=0; attackTimer=0;
+    for(i=0;i<ENEMY_COUNT;i++){ enemyAlive[i]=1; enemyX[i]=205+(i*38); }
+    state=PLAYING;
 }
 
 int main(bool hardReset)
 {
-    u16 pad;
-    u16 pressed;
-    s16 distance;
+    u16 pad, pressed;
+    u8 i;
+    s16 dx, nearest, nearestDist;
+    (void)hardReset;
 
-    (void) hardReset;
-    VDP_setTextPalette(PAL0);
-    VDP_clearTextArea(0, 0, 40, 28);
+    VDP_setTextPalette(PAL2);
+    VDP_setPalette(PAL2, uiPalette);
+    VDP_setBackgroundColor(0);
+    SPR_init();
+    yunoSprite = SPR_addSprite(&yuno, playerX, FLOOR_Y, TILE_ATTR(PAL0, TRUE, FALSE, FALSE));
+    for(i=0;i<ENEMY_COUNT;i++)
+        ninjaSprites[i] = SPR_addSprite(&ninja, enemyX[i], FLOOR_Y, TILE_ATTR(PAL1, TRUE, FALSE, FALSE));
+    VDP_setPalette(PAL0, yuno.palette->data);
+    VDP_setPalette(PAL1, ninja.palette->data);
 
-    while (1)
+    while(1)
     {
-        pad = JOY_readJoypad(JOY_1);
-        pressed = pad & (u16)~previousPad;
-        previousPad = pad;
+        pad=JOY_readJoypad(JOY_1);
+        pressed=pad & (u16)~oldPad;
+        oldPad=pad;
 
-        if (state == STATE_TITLE)
+        if(state==TITLE)
         {
-            VDP_clearTextArea(0, 0, 40, 28);
-            VDP_drawText("YUNO GASAI", 14, 8);
-            VDP_drawText("BLOOD MOON", 14, 10);
-            VDP_drawText("A 16-BIT NIGHTMARE BEGINS", 7, 14);
-            VDP_drawText("PRESS START", 14, 20);
-            if (pressed & BUTTON_START) resetGame();
+            VDP_clearTextArea(0,0,40,28);
+            VDP_drawText("YUNO GASAI", 14, 7);
+            VDP_drawText("BLOOD MOON", 14, 9);
+            VDP_drawText("A 16-BIT NIGHTMARE BEGINS", 7, 13);
+            VDP_drawText("PRESS START", 14, 19);
+            SPR_setVisibility(yunoSprite, HIDDEN);
+            for(i=0;i<ENEMY_COUNT;i++) SPR_setVisibility(ninjaSprites[i], HIDDEN);
+            if(pressed & BUTTON_START){ resetGame(); }
         }
-        else if (state == STATE_PLAYING)
+        else if(state==PLAYING)
         {
-            if (pressed & BUTTON_START)
-            {
-                state = STATE_PAUSED;
-            }
+            SPR_setVisibility(yunoSprite, VISIBLE);
+            if(pressed & BUTTON_START) state=PAUSED;
             else
             {
-                if (attackCooldown > 0) attackCooldown--;
-                if (hurtCooldown > 0) hurtCooldown--;
-                if (jumpFrames > 0) jumpFrames--;
+                if(hurtTimer) hurtTimer--;
+                if(attackTimer) attackTimer--;
+                if(jumpTimer) jumpTimer--;
+                if(pad & BUTTON_LEFT) playerX -= (pad & BUTTON_B) ? 2 : 1;
+                if(pad & BUTTON_RIGHT) playerX += (pad & BUTTON_B) ? 2 : 1;
+                if(playerX<PLAYER_MIN_X) playerX=PLAYER_MIN_X;
+                if(playerX>PLAYER_MAX_X) playerX=PLAYER_MAX_X;
+                if((pressed & BUTTON_UP) && jumpTimer==0) jumpTimer=34;
 
-                if (pad & BUTTON_LEFT)
+                animClock++;
+                enemyClock++;
+                if(enemyClock>=8)
                 {
-                    playerX -= (pad & BUTTON_B) ? 2 : 1;
-                }
-                if (pad & BUTTON_RIGHT)
-                {
-                    playerX += (pad & BUTTON_B) ? 2 : 1;
-                }
-                if (playerX < SCREEN_MIN_X) playerX = SCREEN_MIN_X;
-                if (playerX > SCREEN_MAX_X) playerX = SCREEN_MAX_X;
-
-                if ((pressed & BUTTON_UP) && jumpFrames == 0)
-                {
-                    jumpFrames = 14;
-                }
-
-                distance = enemyX - playerX;
-                if (distance < 0) distance = -distance;
-
-                if (((pressed & BUTTON_A) || (pressed & BUTTON_C)) &&
-                    attackCooldown == 0 && distance <= 3)
-                {
-                    enemyHP--;
-                    attackCooldown = 12;
-                    if (enemyHP <= 0)
+                    enemyClock=0;
+                    for(i=0;i<ENEMY_COUNT;i++) if(enemyAlive[i])
                     {
-                        wavesCleared++;
-                        if (wavesCleared >= 3)
-                        {
-                            state = STATE_WIN;
-                        }
-                        else
-                        {
-                            enemyHP = 3;
-                            enemyX = (playerX < 19) ? 34 : 3;
-                            transitionClock = 20;
-                        }
+                        if(enemyX[i]<playerX+25) enemyX[i]++;
+                        else if(enemyX[i]>playerX+25) enemyX[i]--;
                     }
                 }
 
-                if (transitionClock > 0) transitionClock--;
-
-                enemyClock++;
-                if (enemyClock >= 28)
+                nearest=-1; nearestDist=999;
+                for(i=0;i<ENEMY_COUNT;i++) if(enemyAlive[i])
                 {
-                    enemyClock = 0;
-                    if (enemyX < playerX) enemyX++;
-                    else if (enemyX > playerX) enemyX--;
+                    dx=enemyX[i]-playerX; if(dx<0) dx=-dx;
+                    if(dx<nearestDist){nearestDist=dx;nearest=i;}
+                }
+                if(((pressed & BUTTON_A)||(pressed & BUTTON_C)) && attackTimer==0 && nearest>=0 && nearestDist<43)
+                {
+                    enemyAlive[nearest]=0;
+                    attackTimer=18;
+                }
+                if(nearestDist<23 && hurtTimer==0 && jumpTimer==0 && !(pad & BUTTON_DOWN))
+                {
+                    hp--; hurtTimer=65;
+                    if(hp<=0) state=GAME_OVER;
                 }
 
-                distance = enemyX - playerX;
-                if (distance < 0) distance = -distance;
-                if (distance <= 1 && hurtCooldown == 0 && jumpFrames == 0 &&
-                    !(pad & BUTTON_DOWN))
-                {
-                    playerHP--;
-                    hurtCooldown = 45;
-                    if (playerHP <= 0) state = STATE_GAME_OVER;
-                }
-
-                drawScene();
-                if (pad & BUTTON_DOWN)
-                {
-                    VDP_drawText("CROUCH", 17, 18);
-                }
-                if (jumpFrames > 0)
-                {
-                    VDP_drawText("JUMP!", 17, 18);
-                }
+                drawBackdrop();
+                drawHud();
+                if(pad & BUTTON_DOWN) VDP_drawText("PRISSEL!", 17, 19);
+                if(jumpTimer>0) VDP_drawText("JUMP!", 18, 18);
+                syncSprites();
             }
         }
-        else if (state == STATE_PAUSED)
+        else if(state==PAUSED)
         {
-            VDP_clearTextArea(0, 0, 40, 28);
-            VDP_drawText("PAUSED", 16, 10);
-            VDP_drawText("PRESS START TO CONTINUE", 8, 15);
-            if (pressed & BUTTON_START) state = STATE_PLAYING;
+            VDP_clearTextArea(0,0,40,28);
+            VDP_drawText("PAUSED",16,10);
+            VDP_drawText("PRESS START TO CONTINUE",8,15);
+            if(pressed & BUTTON_START) state=PLAYING;
         }
-        else if (state == STATE_GAME_OVER)
+        else
         {
-            VDP_clearTextArea(0, 0, 40, 28);
-            VDP_drawText("YUNO HAS FALLEN...", 10, 10);
-            VDP_drawText("PRESS START TO RETRY", 10, 16);
-            if (pressed & BUTTON_START) resetGame();
+            VDP_clearTextArea(0,0,40,28);
+            if(state==GAME_OVER) VDP_drawText("YUNO HAS FALLEN...",10,10);
+            else VDP_drawText("THE NIGHT IS YOURS",10,10);
+            VDP_drawText("PRESS START TO PLAY AGAIN",7,17);
+            if(pressed & BUTTON_START) resetGame();
         }
-        else if (state == STATE_WIN)
-        {
-            VDP_clearTextArea(0, 0, 40, 28);
-            VDP_drawText("THE NIGHT IS YOURS", 10, 9);
-            VDP_drawText("THREE ENEMIES DEFEATED", 8, 13);
-            VDP_drawText("PRESS START TO PLAY AGAIN", 7, 19);
-            if (pressed & BUTTON_START) resetGame();
-        }
-
+        SPR_update();
         SYS_doVBlankProcess();
     }
-
     return 0;
 }
