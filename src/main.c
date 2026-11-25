@@ -35,8 +35,6 @@ static const u16 uiPalette[16] = {
 static void drawBackdrop(void)
 {
     VDP_clearTextArea(0,0,40,28);
-    VDP_drawText("A: PUNCH   C: KICK   B: RUN", 5, 25);
-    VDP_drawText("UP: JUMP   DOWN: CROUCH   START: PAUSE", 1, 27);
 }
 
 static void syncSprites(void)
