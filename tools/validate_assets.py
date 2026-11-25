@@ -3,7 +3,8 @@
 import struct, sys, zlib
 from pathlib import Path
 
-SIG = b"\\x89PNG\\r\\n\\x1a\\n"
+SIG = b"\x89PNG\r\n\x1a\n"
+
 def validate(path):
     data = Path(path).read_bytes()
     if not data.startswith(SIG):
@@ -24,13 +25,15 @@ def validate(path):
         if actual != expected:
             raise ValueError(f"{path}: bad CRC in {kind.decode('ascii', 'replace')} chunk")
         if kind == b"IHDR":
-            if seen_ihdr or n != 13: raise ValueError(f"{path}: invalid IHDR")
+            if seen_ihdr or n != 13:
+                raise ValueError(f"{path}: invalid IHDR")
             width, height, depth, color = struct.unpack(">IIBB", payload[:10])
             seen_ihdr = True
         elif kind == b"IDAT":
             idat.extend(payload)
         elif kind == b"IEND":
-            if n != 0: raise ValueError(f"{path}: invalid IEND")
+            if n != 0:
+                raise ValueError(f"{path}: invalid IEND")
             seen_iend = True
             pos = end
             break
