@@ -105,7 +105,7 @@ int main(bool hardReset)
     VDP_setTextPalette(PAL2);
     PAL_setPalette(PAL2, uiPalette, DMA);
     VDP_setBackgroundColor(0);
-    VDP_drawImageEx(BG_B, &sakura, TILE_ATTR_FULL(PAL3, FALSE, FALSE, FALSE, TILE_USERINDEX), 0, 0, TRUE, TRUE);
+    VDP_drawImageEx(BG_B, &sakura, TILE_ATTR_FULL(PAL3, FALSE, FALSE, FALSE, TILE_USER_INDEX), 0, 0, TRUE, TRUE);
     SPR_init();
     yunoSprite = SPR_addSprite(&yuno, playerX, FLOOR_Y, TILE_ATTR(PAL0, TRUE, FALSE, FALSE));
     for(i=0;i<ENEMY_COUNT;i++)
