@@ -35,13 +35,6 @@ static const u16 uiPalette[16] = {
 static void drawBackdrop(void)
 {
     VDP_clearTextArea(0,0,40,28);
-    VDP_drawText("TOKYO  /  BLOOD MOON", 10, 1);
-    VDP_drawText("     .          .           .", 2, 4);
-    VDP_drawText("   |###|     |####|      |###|", 2, 7);
-    VDP_drawText("   |###|     |####|      |###|", 2, 8);
-    VDP_drawText("___|###|_____|####|______|###|___", 1, 10);
-    VDP_drawText("     .       ( MOON )       .", 2, 12);
-    VDP_drawText("________________________________________", 0, 22);
     VDP_drawText("A: PUNCH   C: KICK   B: RUN", 5, 25);
     VDP_drawText("UP: JUMP   DOWN: CROUCH   START: PAUSE", 1, 27);
 }
@@ -112,6 +105,7 @@ int main(bool hardReset)
     VDP_setTextPalette(PAL2);
     PAL_setPalette(PAL2, uiPalette, DMA);
     VDP_setBackgroundColor(0);
+    VDP_drawImageEx(BG_B, &sakura, TILE_ATTR_FULL(PAL3, FALSE, FALSE, FALSE, TILE_AUTO), 0, 0, TRUE, TRUE);
     SPR_init();
     yunoSprite = SPR_addSprite(&yuno, playerX, FLOOR_Y, TILE_ATTR(PAL0, TRUE, FALSE, FALSE));
     for(i=0;i<ENEMY_COUNT;i++)
