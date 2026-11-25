@@ -16,6 +16,9 @@ static u8 enemyAlive[ENEMY_COUNT] = {1,1,1};
 static s16 hp = 3;
 static s16 jumpTimer = 0;
 static u16 animClock = 0, enemyClock = 0, hurtTimer = 0, attackTimer = 0;
+static u16 petalClock = 0;
+static u8 petalX[5] = {4, 11, 19, 28, 36};
+static u8 petalY[5] = {5, 9, 4, 12, 7};
 static u16 oldPad = 0;
 
 static const u16 uiPalette[16] = {
@@ -54,6 +57,30 @@ static void syncSprites(void)
         SPR_setPosition(ninjaSprites[i], enemyX[i], FLOOR_Y);
         SPR_setAnimAndFrame(ninjaSprites[i], 1, (animClock >> 4) & 3);
     }
+}
+
+static void drawSakuraPetals(void)
+{
+    u8 i;
+    petalClock++;
+    if (petalClock >= 12)
+    {
+        petalClock = 0;
+        for (i = 0; i < 5; i++)
+        {
+            petalY[i]++;
+            if (i & 1) petalX[i]++;
+            else if (petalX[i] > 0) petalX[i]--;
+            if (petalY[i] > 20)
+            {
+                petalY[i] = 3;
+                petalX[i] = (i * 7) + 2;
+            }
+            if (petalX[i] > 39) petalX[i] = 0;
+        }
+    }
+    for (i = 0; i < 5; i++)
+        VDP_drawText("*", petalX[i], petalY[i]);
 }
 
 static void drawHud(void)
@@ -155,6 +182,7 @@ int main(bool hardReset)
 
                 drawBackdrop();
                 drawHud();
+                drawSakuraPetals();
                 if(pad & BUTTON_DOWN) VDP_drawText("PRISSEL!", 17, 19);
                 if(jumpTimer>0) VDP_drawText("JUMP!", 18, 18);
                 syncSprites();
