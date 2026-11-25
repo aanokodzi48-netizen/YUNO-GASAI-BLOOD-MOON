@@ -20,6 +20,8 @@ static u16 petalClock = 0;
 static u8 petalX[5] = {4, 11, 19, 28, 36};
 static u8 petalY[5] = {5, 9, 4, 12, 7};
 static u16 oldPad = 0;
+static s16 lastHudHP = -1, lastHudEnemies = -1;
+static GameState renderedState = (GameState)-1;
 
 static const u16 uiPalette[16] = {
     RGB24_TO_VDPCOLOR(0x080818), RGB24_TO_VDPCOLOR(0x17172E),
@@ -31,11 +33,6 @@ static const u16 uiPalette[16] = {
     RGB24_TO_VDPCOLOR(0x2A263A), RGB24_TO_VDPCOLOR(0x4D5C78),
     RGB24_TO_VDPCOLOR(0x8393A8), RGB24_TO_VDPCOLOR(0xFFF0E7)
 };
-
-static void drawBackdrop(void)
-{
-    VDP_clearTextArea(0,0,40,28);
-}
 
 static void syncSprites(void)
 {
@@ -50,45 +47,32 @@ static void syncSprites(void)
     }
 }
 
-static void drawSakuraPetals(void)
-{
-    u8 i;
-    petalClock++;
-    if (petalClock >= 12)
-    {
-        petalClock = 0;
-        for (i = 0; i < 5; i++)
-        {
-            petalY[i]++;
-            if (i & 1) petalX[i]++;
-            else if (petalX[i] > 0) petalX[i]--;
-            if (petalY[i] > 20)
-            {
-                petalY[i] = 3;
-                petalX[i] = (i * 7) + 2;
-            }
-            if (petalX[i] > 39) petalX[i] = 0;
-        }
-    }
-    for (i = 0; i < 5; i++)
-        VDP_drawText("*", petalX[i], petalY[i]);
-}
-
 static void drawHud(void)
 {
     char buf[8];
-    sprintf(buf, "%d", hp);
-    VDP_drawText("HP:", 2, 2); VDP_drawText(buf, 6, 2);
-    VDP_drawText("NINJA:", 30, 2);
-    sprintf(buf, "%d", (enemyAlive[0]+enemyAlive[1]+enemyAlive[2]));
-    VDP_drawText(buf, 37, 2);
-    VDP_drawText("YUNO GASAI: BLOOD MOON", 9, 0);
+    s16 enemies = enemyAlive[0] + enemyAlive[1] + enemyAlive[2];
+
+    if (lastHudHP != hp)
+    {
+        sprintf(buf, "%d", hp);
+        VDP_drawText("HP:", 2, 2);
+        VDP_drawText(buf, 6, 2);
+        lastHudHP = hp;
+    }
+    if (lastHudEnemies != enemies)
+    {
+        sprintf(buf, "%d", enemies);
+        VDP_drawText("NINJA:", 30, 2);
+        VDP_drawText(buf, 37, 2);
+        lastHudEnemies = enemies;
+    }
 }
 
 static void resetGame(void)
 {
     u8 i;
     playerX=54; hp=3; jumpTimer=0; animClock=0; enemyClock=0; hurtTimer=0; attackTimer=0;
+    lastHudHP=-1; lastHudEnemies=-1;
     for(i=0;i<ENEMY_COUNT;i++){ enemyAlive[i]=1; enemyX[i]=205+(i*38); }
     state=PLAYING;
 }
@@ -117,13 +101,37 @@ int main(bool hardReset)
         pressed=pad & (u16)~oldPad;
         oldPad=pad;
 
+        if (state != renderedState)
+        {
+            VDP_clearTextArea(0, 0, 40, 28);
+            if (state == TITLE)
+            {
+                VDP_drawText("YUNO GASAI", 14, 7);
+                VDP_drawText("BLOOD MOON", 14, 9);
+                VDP_drawText("A 16-BIT NIGHTMARE BEGINS", 7, 13);
+                VDP_drawText("PRESS START", 14, 19);
+            }
+            else if (state == PAUSED)
+            {
+                VDP_drawText("PAUSED", 16, 10);
+                VDP_drawText("PRESS START TO CONTINUE", 8, 15);
+            }
+            else if (state == GAME_OVER || state == WIN)
+            {
+                if (state == GAME_OVER) VDP_drawText("YUNO HAS FALLEN...", 10, 10);
+                else VDP_drawText("THE NIGHT IS YOURS", 10, 10);
+                VDP_drawText("PRESS START TO PLAY AGAIN", 7, 17);
+            }
+            else if (state == PLAYING)
+            {
+                lastHudHP = -1;
+                lastHudEnemies = -1;
+            }
+            renderedState = state;
+        }
+
         if(state==TITLE)
         {
-            VDP_clearTextArea(0,0,40,28);
-            VDP_drawText("YUNO GASAI", 14, 7);
-            VDP_drawText("BLOOD MOON", 14, 9);
-            VDP_drawText("A 16-BIT NIGHTMARE BEGINS", 7, 13);
-            VDP_drawText("PRESS START", 14, 19);
             SPR_setVisibility(yunoSprite, HIDDEN);
             for(i=0;i<ENEMY_COUNT;i++) SPR_setVisibility(ninjaSprites[i], HIDDEN);
             if(pressed & BUTTON_START){ resetGame(); }
@@ -172,9 +180,7 @@ int main(bool hardReset)
                     if(hp<=0) state=GAME_OVER;
                 }
 
-                drawBackdrop();
                 drawHud();
-                drawSakuraPetals();
                 if(pad & BUTTON_DOWN) VDP_drawText("PRISSEL!", 17, 19);
                 if(jumpTimer>0) VDP_drawText("JUMP!", 18, 18);
                 syncSprites();
@@ -182,17 +188,10 @@ int main(bool hardReset)
         }
         else if(state==PAUSED)
         {
-            VDP_clearTextArea(0,0,40,28);
-            VDP_drawText("PAUSED",16,10);
-            VDP_drawText("PRESS START TO CONTINUE",8,15);
             if(pressed & BUTTON_START) state=PLAYING;
         }
         else
         {
-            VDP_clearTextArea(0,0,40,28);
-            if(state==GAME_OVER) VDP_drawText("YUNO HAS FALLEN...",10,10);
-            else VDP_drawText("THE NIGHT IS YOURS",10,10);
-            VDP_drawText("PRESS START TO PLAY AGAIN",7,17);
             if(pressed & BUTTON_START) resetGame();
         }
         SPR_update();
