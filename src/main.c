@@ -83,14 +83,14 @@ int main(bool hardReset)
     (void)hardReset;
 
     VDP_setTextPalette(PAL2);
-    PAL_setPalette(PAL2, uiPalette);
+    PAL_setPalette(PAL2, uiPalette, DMA);
     VDP_setBackgroundColor(0);
     SPR_init();
     yunoSprite = SPR_addSprite(&yuno, playerX, FLOOR_Y, TILE_ATTR(PAL0, TRUE, FALSE, FALSE));
     for(i=0;i<ENEMY_COUNT;i++)
         ninjaSprites[i] = SPR_addSprite(&ninja, enemyX[i], FLOOR_Y, TILE_ATTR(PAL1, TRUE, FALSE, FALSE));
-    PAL_setPalette(PAL0, yuno.palette->data);
-    PAL_setPalette(PAL1, ninja.palette->data);
+    PAL_setPalette(PAL0, yuno.palette->data, DMA);
+    PAL_setPalette(PAL1, ninja.palette->data, DMA);
 
     while(1)
     {
