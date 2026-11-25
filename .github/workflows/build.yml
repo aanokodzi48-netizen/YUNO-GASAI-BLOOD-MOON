@@ -29,8 +29,8 @@ jobs:
           make sgdk -j2
           sudo make install
 
-      - name: Validate indexed sprite assets
-        run: python3 tools/validate_assets.py res/yuno.png res/ninja.png
+      - name: Validate indexed assets
+        run: python3 tools/validate_assets.py res/yuno.png res/room_bg.png
 
       - name: Compile game ROM
         shell: bash
