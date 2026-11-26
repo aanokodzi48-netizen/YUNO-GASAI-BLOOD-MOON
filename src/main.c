@@ -307,6 +307,7 @@ int main(bool hardReset)
             if (pressed & BUTTON_B)
             {
                 gameState = STATE_MAIN_MENU;
+                mainSelection = 0;
                 navPrevious = 0;
                 navRepeat = 0;
                 drawMainMenu();
@@ -347,6 +348,7 @@ int main(bool hardReset)
                     else
                     {
                         gameState = STATE_MAIN_MENU;
+                        mainSelection = 0;
                         navPrevious = 0;
                         navRepeat = 0;
                         drawMainMenu();
