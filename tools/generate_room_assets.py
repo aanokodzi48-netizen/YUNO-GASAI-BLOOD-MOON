@@ -18,7 +18,7 @@ PALETTE = [
     (0, 0, 0),        # 0 transparent
     (36, 36, 73),     # 1 deep blue night (also replaces the near-black old shade)
     (73, 36, 109),    # 2 violet shadow
-    (73, 73, 109),    # 3 slate violet
+    (109, 109, 109),  # 3 cool slate floor
     (109, 73, 109),   # 4 muted violet
     (146, 73, 146),   # 5 violet accent
     (182, 73, 146),   # 6 restrained pink
@@ -36,7 +36,7 @@ PALETTE = [
 # former very-dark-blue swatch to the nearest opaque dark-blue entry at index 1.
 C = [
     (36, 36, 73), (36, 36, 73), (73, 36, 109), (73, 73, 109),
-    (109, 73, 109), (146, 73, 146), (182, 73, 146), (219, 109, 182),
+    (109, 109, 109), (146, 73, 146), (182, 73, 146), (219, 109, 182),
     (73, 36, 36), (109, 73, 36), (146, 109, 73), (182, 146, 73),
     (182, 146, 109), (219, 182, 146), (219, 219, 182), (255, 255, 219)
 ]
@@ -45,32 +45,38 @@ def build_room():
     im = Image.new("RGB", (W, H), C[13])
     d = ImageDraw.Draw(im)
 
-    # Warm plaster walls and dark timber framing.
-    d.rectangle((0, 0, 319, 154), fill=C[13])
+    # Warm plaster walls and a lower baseboard leave a deeper walkable floor.
+    d.rectangle((0, 0, 319, 140), fill=C[13])
     d.rectangle((0, 0, 319, 11), fill=C[8])
     d.rectangle((0, 11, 319, 15), fill=C[10])
-    d.rectangle((0, 146, 319, 154), fill=C[8])
-    d.rectangle((0, 151, 319, 154), fill=C[11])
+    d.rectangle((0, 130, 319, 140), fill=C[8])
+    d.rectangle((0, 134, 319, 136), fill=C[11])
+    d.line((0, 139, 319, 139), fill=C[14], width=1)
     for x in (4, 156, 316):
-        d.rectangle((x, 17, x + 3, 145), fill=C[12])
-        d.line((x + 1, 18, x + 1, 143), fill=C[14])
+        d.rectangle((x, 17, x + 3, 132), fill=C[12])
+        d.line((x + 1, 18, x + 1, 130), fill=C[14])
 
-    # Wooden floor and staggered plank seams.
-    d.rectangle((0, 155, 319, 223), fill=C[10])
-    for y in (156, 173, 190, 207, 222):
-        d.line((0, y, 319, y), fill=C[8], width=2)
-    for row, y in enumerate((158, 175, 192, 209)):
+    # Wider cool-slate floor: more depth for walking, not a stretched room.
+    d.rectangle((0, 141, 319, 223), fill=C[3])
+    for y in (141, 158, 175, 192, 209, 222):
+        d.line((0, y, 319, y), fill=C[2], width=2)
+        if y < 222:
+            d.line((0, y + 3, 319, y + 3), fill=C[4])
+    for row, y in enumerate((143, 160, 177, 194, 211)):
         offset = 0 if row % 2 == 0 else 28
         for x in range(offset, 320, 56):
-            d.line((x, y, x, y + 14), fill=C[9])
-            d.line((x + 2, y + 2, x + 2, y + 12), fill=C[11])
+            d.line((x, y, x, y + 13), fill=C[2])
+            d.line((x + 2, y + 2, x + 2, y + 11), fill=C[14])
+    # Subtle reflected bands make the slate floor feel broad and polished.
+    d.line((0, 216, 319, 216), fill=C[4])
+    d.line((0, 219, 319, 219), fill=C[2])
 
     # Wide window: quiet evening street, small moon, trees and lanterns.
     d.rectangle((91, 22, 225, 108), fill=C[8])
     d.rectangle((96, 27, 220, 103), fill=C[10])
     d.rectangle((101, 32, 215, 98), fill=C[1])
     d.rectangle((102, 53, 214, 70), fill=C[2])
-    d.rectangle((102, 71, 214, 97), fill=C[3])
+    d.rectangle((102, 71, 214, 97), fill=C[2])
     d.line((102, 51, 214, 51), fill=C[4])
     d.line((102, 69, 214, 69), fill=C[4])
     # The moon is a separate sprite so it can be replaced by a sun after sleep.
@@ -213,35 +219,26 @@ def build_room():
     d.line((184, 116, 199, 116), fill=C[10], width=2)
     d.rectangle((188, 121, 195, 125), fill=C[11])
 
-    # Large woven plum rug with a double border, tassels and floral medallion.
-    d.rectangle((67, 174, 305, 214), fill=C[8])
-    d.rectangle((70, 176, 302, 211), fill=C[5])
-    d.rectangle((74, 179, 298, 208), fill=C[6])
-    d.rectangle((78, 182, 294, 205), fill=C[4])
-    d.rectangle((82, 185, 290, 202), fill=C[5])
-    d.rectangle((86, 188, 286, 199), fill=C[6])
-    d.line((74, 180, 298, 180), fill=C[7], width=2)
-    d.line((74, 207, 298, 207), fill=C[2], width=2)
-    d.line((77, 183, 295, 183), fill=C[7])
-    d.line((77, 204, 295, 204), fill=C[7])
-    # Woven side motifs and corner ornaments.
-    for x in range(88, 288, 16):
-        d.polygon([(x, 184), (x+3, 187), (x, 190), (x-3, 187)], fill=C[11])
-        d.polygon([(x, 197), (x+3, 200), (x, 203), (x-3, 200)], fill=C[11])
-    for x in (80, 284):
-        for y in (185, 199):
-            d.rectangle((x, y, x+4, y+3), fill=C[7])
-            d.point((x+2, y+1), fill=C[14])
-    # Central ornamental medallion.
-    d.ellipse((158, 185, 214, 201), fill=C[4])
-    d.ellipse((163, 187, 209, 199), fill=C[5])
-    d.polygon([(186, 186), (197, 193), (186, 200), (175, 193)], fill=C[11])
-    d.polygon([(186, 189), (192, 193), (186, 197), (180, 193)], fill=C[7])
-    d.rectangle((184, 192, 188, 194), fill=C[14])
-    # Short fringe along both long edges.
-    for x in range(76, 300, 8):
-        d.line((x, 211, x+2, 214), fill=C[12])
-        d.line((x, 174, x+2, 176), fill=C[12])
+    # One round oval rug in front of the bed (side-view perspective).
+    d.ellipse((204, 180, 314, 221), fill=C[8])
+    d.ellipse((207, 181, 311, 218), fill=C[2])
+    d.ellipse((211, 184, 307, 216), fill=C[5])
+    d.ellipse((215, 187, 303, 213), fill=C[6])
+    d.ellipse((220, 190, 298, 210), fill=C[4])
+    d.ellipse((229, 193, 289, 207), fill=C[5])
+    d.ellipse((233, 194, 285, 206), outline=C[11], width=2)
+    d.ellipse((240, 196, 278, 204), outline=C[7], width=1)
+    # A single central flower medallion and woven outer ring.
+    d.polygon([(259, 194), (265, 199), (259, 205), (253, 199)], fill=C[11])
+    d.polygon([(259, 196), (262, 199), (259, 202), (256, 199)], fill=C[7])
+    d.ellipse((257, 197, 261, 201), fill=C[14])
+    for x in (218, 228, 290, 300):
+        d.point((x, 199), fill=C[14])
+    # Small tassels follow the oval outline.
+    for x in range(214, 306, 12):
+        d.line((x, 217, x + 1, 220), fill=C[12])
+    d.line((206, 195, 202, 198), fill=C[12])
+    d.line((312, 195, 316, 198), fill=C[12])
 
     # Final furniture pass: stronger silhouettes and small hand-crafted details.
     # Carved bed headboard with brass finials, inset panels and a raised top rail.
@@ -283,17 +280,9 @@ def build_room():
     d.ellipse((187, 128, 196, 132), fill=C[9])
     d.line((189, 129, 194, 129), fill=C[14])
 
-    # More legible rug weave: repeated diamonds, inner stitching and corner tassels.
-    d.rectangle((72, 178, 300, 209), outline=C[11])
-    d.line((80, 181, 292, 181), fill=C[14])
-    d.line((80, 205, 292, 205), fill=C[2])
-    for x in range(96, 285, 24):
-        d.polygon([(x, 187), (x + 5, 192), (x, 197), (x - 5, 192)], fill=C[11])
-        d.polygon([(x, 189), (x + 3, 192), (x, 195), (x - 3, 192)], fill=C[7])
-        d.point((x, 192), fill=C[15])
-    for x in (73, 294):
-        for y in (184, 198):
-            d.line((x, y, x + (4 if x < 100 else -4), y + 4), fill=C[14], width=2)
+    # Fine stitching on the one oval rug; no second carpet or rectangular runner.
+    d.ellipse((209, 183, 309, 217), outline=C[11], width=1)
+    d.ellipse((216, 187, 302, 213), outline=C[7], width=1)
 
     d.rectangle((118, 126, 137, 141), fill=C[8])
     d.rectangle((121, 129, 134, 138), fill=C[4])
@@ -401,14 +390,39 @@ def make_morning_window():
     return im
 
 def make_lamp_glow():
-    """32x32 transparent halo. Lamp body itself remains part of the room background."""
+    """32x32 transparent, dithered halo. The lamp body remains visible below it."""
     im = Image.new("RGB", (32, 32), FX_PALETTE[0])
     d = ImageDraw.Draw(im)
-    d.ellipse((3, 2, 28, 28), outline=FX_PALETTE[5], width=2)
-    d.ellipse((6, 5, 25, 25), outline=FX_PALETTE[15], width=2)
-    d.arc((8, 3, 24, 21), 190, 350, fill=FX_PALETTE[6], width=2)
-    d.arc((1, 7, 30, 31), 195, 345, fill=FX_PALETTE[5], width=1)
-    # Keep the center transparent so the original lamp shade remains visible.
+
+    # Mega Drive has no per-pixel alpha. A restrained checker/dither pattern
+    # simulates a soft warm light while preserving the room details underneath.
+    for y in range(32):
+        for x in range(32):
+            dx = (x - 15.5) / 15.5
+            dy = (y - 14.0) / 15.0
+            radius = (dx * dx + dy * dy) ** 0.5
+            if radius > 0.98 or radius < 0.19:
+                continue
+
+            pattern = (x * 5 + y * 3) % 7
+            if radius < 0.42:
+                if pattern in (0, 1, 3, 5):
+                    d.point((x, y), fill=FX_PALETTE[6] if pattern in (0, 5) else FX_PALETTE[15])
+                elif pattern == 2:
+                    d.point((x, y), fill=FX_PALETTE[5])
+            elif radius < 0.72:
+                if pattern in (0, 3):
+                    d.point((x, y), fill=FX_PALETTE[5])
+                elif pattern == 5:
+                    d.point((x, y), fill=FX_PALETTE[6])
+            elif pattern == 0:
+                d.point((x, y), fill=FX_PALETTE[5])
+
+    # Bright pinpoints above the shade add a soft lamp bloom.
+    d.point((15, 5), fill=FX_PALETTE[7])
+    d.point((16, 5), fill=FX_PALETTE[6])
+    d.point((13, 7), fill=FX_PALETTE[5])
+    d.point((18, 7), fill=FX_PALETTE[5])
     return im
 
 def make_sky_fx():

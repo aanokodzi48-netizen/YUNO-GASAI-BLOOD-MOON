@@ -4,7 +4,7 @@
 #define PLAYER_MIN_X 4
 #define PLAYER_MAX_X 300
 #define PLAYER_MIN_Y 140
-#define PLAYER_MAX_Y 174
+#define PLAYER_MAX_Y 188
 #define SPRITE_VRAM_TILES 128
 #define WINDOW_TILE_X 13
 #define WINDOW_TILE_Y 4
@@ -46,13 +46,13 @@ typedef enum
     ROOM_OBJECT_WARDROBE
 } RoomObject;
 
-/* Invisible floor-level collision footprints, aligned to the 320x224 room art. */
+/* Tight floor-level footprints: only the actual furniture bases block movement. */
 static const RoomBlock roomBlocks[] = {
-    {  8, 138,  42,  39 }, /* entry door */
-    { 54, 126,  51,  47 }, /* wardrobe base */
-    {169, 140,  45,  32 }, /* bedside cabinet base */
-    {207, 144, 108,  32 }, /* bed frame and base */
-    {280, 126,  36,  46 }  /* bookcase base */
+    { 12, 147,  34,  13 }, /* door threshold */
+    { 58, 151,  43,  12 }, /* wardrobe feet */
+    {173, 159,  35,  10 }, /* bedside cabinet feet */
+    {210, 166, 103,  15 }, /* bed frame */
+    {283, 136,  33,  16 }  /* bookcase plinth */
 };
 
 static Sprite *yunoSprite = NULL;
@@ -102,6 +102,45 @@ static const u16 uiPalette[16] = {
     RGB24_TO_VDPCOLOR(0xDBB692),
     RGB24_TO_VDPCOLOR(0xFFDBB6),
     0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
+};
+
+/* PAL3 is the room palette: lamp/day states brighten it without reloading VRAM. */
+static const u16 roomLampPalette[16] = {
+    0x0000,
+    RGB24_TO_VDPCOLOR(0x49496D),
+    RGB24_TO_VDPCOLOR(0x6D496D),
+    RGB24_TO_VDPCOLOR(0x929292),
+    RGB24_TO_VDPCOLOR(0x926D92),
+    RGB24_TO_VDPCOLOR(0xB66D92),
+    RGB24_TO_VDPCOLOR(0xDB6D92),
+    RGB24_TO_VDPCOLOR(0xFF92DB),
+    RGB24_TO_VDPCOLOR(0x6D4924),
+    RGB24_TO_VDPCOLOR(0x926D49),
+    RGB24_TO_VDPCOLOR(0xB69249),
+    RGB24_TO_VDPCOLOR(0xDBB66D),
+    RGB24_TO_VDPCOLOR(0xDBB692),
+    RGB24_TO_VDPCOLOR(0xFFDBB6),
+    RGB24_TO_VDPCOLOR(0xFFFFDB),
+    RGB24_TO_VDPCOLOR(0xFFFFFF)
+};
+
+static const u16 roomDayPalette[16] = {
+    0x0000,
+    RGB24_TO_VDPCOLOR(0x6D6D92),
+    RGB24_TO_VDPCOLOR(0x926D92),
+    RGB24_TO_VDPCOLOR(0xB6B6B6),
+    RGB24_TO_VDPCOLOR(0xB692B6),
+    RGB24_TO_VDPCOLOR(0xDB92B6),
+    RGB24_TO_VDPCOLOR(0xFFB6DB),
+    RGB24_TO_VDPCOLOR(0xFFDBDB),
+    RGB24_TO_VDPCOLOR(0x926D49),
+    RGB24_TO_VDPCOLOR(0xB6926D),
+    RGB24_TO_VDPCOLOR(0xDBB692),
+    RGB24_TO_VDPCOLOR(0xFFDB92),
+    RGB24_TO_VDPCOLOR(0xFFDBB6),
+    RGB24_TO_VDPCOLOR(0xFFFFDB),
+    RGB24_TO_VDPCOLOR(0xFFFFFF),
+    RGB24_TO_VDPCOLOR(0xFFFFFF)
 };
 
 static void drawLine(const char *label, u16 x, u16 y, bool selected)
@@ -305,10 +344,21 @@ static bool drawMorningWindow(void)
                             0, 0, WINDOW_TILE_W, WINDOW_TILE_H, CPU);
 }
 
-static void updateLampGlow(void)
+static void updateRoomLighting(void)
 {
+    /* The whole room responds to the lamp/time of day through PAL3. This is
+       instantaneous and does not reload the room tiles, avoiding the old
+       purple/blank-frame glitch during interaction. */
+    if (isMorning)
+        PAL_setPalette(PAL3, roomDayPalette, CPU);
+    else if (lampOn)
+        PAL_setPalette(PAL3, roomLampPalette, CPU);
+    else
+        PAL_setPalette(PAL3, room.palette->data, CPU);
+
     if (lampGlowSprite != NULL)
-        SPR_setVisibility(lampGlowSprite, lampOn ? VISIBLE : HIDDEN);
+        SPR_setVisibility(lampGlowSprite,
+                          (lampOn && !isMorning) ? VISIBLE : HIDDEN);
 }
 
 static void updateSkySprite(void)
@@ -398,22 +448,24 @@ static RoomObject getNearbyObject(void)
     s32 bestDistance = 0x7FFFFFFF;
     RoomObject nearest = ROOM_OBJECT_NONE;
 
-    distance = distanceSquared(centerX, centerY, 191, 120);
-    if ((distance <= (50L * 50L)) && (distance < bestDistance))
+    /* Interaction appears only at the front edge of the bedside cabinet. */
+    distance = distanceSquared(centerX, centerY, 191, 160);
+    if ((distance <= (30L * 30L)) && (distance < bestDistance))
     {
         bestDistance = distance;
         nearest = ROOM_OBJECT_LAMP;
     }
 
-    distance = distanceSquared(centerX, centerY, 263, 155);
-    if ((distance <= (66L * 66L)) && (distance < bestDistance))
+    /* The bed prompt is deliberately short-range, from its front side only. */
+    distance = distanceSquared(centerX, centerY, 260, 178);
+    if ((distance <= (36L * 36L)) && (distance < bestDistance))
     {
         bestDistance = distance;
         nearest = ROOM_OBJECT_BED;
     }
 
-    distance = distanceSquared(centerX, centerY, 80, 125);
-    if ((distance <= (50L * 50L)) && (distance < bestDistance))
+    distance = distanceSquared(centerX, centerY, 80, 159);
+    if ((distance <= (32L * 32L)) && (distance < bestDistance))
     {
         bestDistance = distance;
         nearest = ROOM_OBJECT_WARDROBE;
@@ -575,15 +627,15 @@ static void wakeFromSleep(void)
     clockHour = 7;
     clockMinute = 0;
     lampOn = FALSE;
-    updateLampGlow();
+    updateRoomLighting();
     updateSkySprite();
 
     if (!drawMorningWindow())
         showFatalError("MORNING WINDOW ERROR");
     drawClockPanel();
 
-    playerX = 205;
-    playerY = 166;
+    playerX = 184;
+    playerY = 179;
     SPR_setPosition(yunoSprite, playerX, playerY);
     SPR_setVisibility(yunoSprite, VISIBLE);
 
@@ -597,13 +649,13 @@ static void interactWithObject(RoomObject object)
     {
         /* Do not reload the full room bitmap: toggle only the small glow sprite. */
         lampOn = !lampOn;
-        updateLampGlow();
+        updateRoomLighting();
         showRoomMessage(lampOn ? "СВЕТ ВКЛЮЧЕН" : "СВЕТ ВЫКЛЮЧЕН", 90);
     }
     else if (object == ROOM_OBJECT_BED)
     {
         lampOn = FALSE;
-        updateLampGlow();
+        updateRoomLighting();
 
         playerX = 255;
         playerY = 137;
@@ -652,6 +704,8 @@ static bool startGame(void)
         return FALSE;
     }
 
+    updateRoomLighting();
+
     /* FX first, player last: Yuno remains visually in front of light effects. */
     lampGlowSprite = SPR_addSprite(&lamp_glow, 174, 94,
                                    TILE_ATTR(PAL0, TRUE, FALSE, FALSE));
@@ -667,7 +721,7 @@ static bool startGame(void)
     }
 
     SPR_setAnimAndFrame(skyFxSprite, 0, 0);
-    updateLampGlow();
+    updateRoomLighting();
 
     playerX = 144;
     playerY = 154;
