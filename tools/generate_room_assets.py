@@ -185,13 +185,13 @@ def build_room():
     d.line((84, 198, 287, 198), fill=C[14])
     for x in range(90, 286, 24):
         d.rectangle((x, 191, x + 7, 194), fill=C[7])
-    d.rectangle((129, 141, 146, 157), fill=C[8])
-    d.rectangle((131, 143, 144, 154), fill=C[4])
-    d.rectangle((135, 125, 139, 144), fill=C[15])
-    d.rectangle((126, 129, 136, 134), fill=C[15])
-    d.rectangle((138, 126, 149, 132), fill=C[15])
-    d.rectangle((130, 121, 138, 127), fill=C[15])
-    d.rectangle((139, 119, 145, 126), fill=C[15])
+    d.rectangle((118, 126, 137, 141), fill=C[8])
+    d.rectangle((121, 129, 134, 138), fill=C[4])
+    d.rectangle((127, 111, 131, 129), fill=C[15])
+    d.rectangle((115, 115, 128, 121), fill=C[15])
+    d.rectangle((130, 112, 142, 118), fill=C[15])
+    d.rectangle((120, 108, 130, 114), fill=C[15])
+    d.rectangle((134, 105, 141, 112), fill=C[15])
 
     return im
 

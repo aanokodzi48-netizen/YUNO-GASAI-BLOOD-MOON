@@ -38,8 +38,7 @@ static const RoomBlock roomBlocks[] = {
     { 54, 126,  51,  47 }, /* wardrobe base */
     {169, 140,  45,  32 }, /* bedside cabinet base */
     {207, 144, 108,  32 }, /* bed frame and base */
-    {280, 126,  36,  46 }, /* bookcase base */
-    {126, 130,  23,  36 }  /* floor plant */
+    {280, 126,  36,  46 }  /* bookcase base */
 };
 
 static Sprite *yunoSprite = NULL;
