@@ -1,0 +1,2 @@
+# Python files under tools/ are build-time asset generators and validators, not the game runtime.
+tools/*.py linguist-detectable=false
