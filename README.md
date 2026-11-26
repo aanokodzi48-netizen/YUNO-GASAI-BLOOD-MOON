@@ -11,7 +11,7 @@ A Mega Drive / Genesis game prototype built with SGDK.
 
 ## Bedroom prototype
 
-- 320x224 4-bit indexed Mega Drive room backgrounds, with the bedside lamp on/off variants using the same 16-color palette.
+- 320x224 4-bit indexed Mega Drive room backgrounds generated from tools/generate_room_assets.py; lamp-on/off variants share the same 16-color palette.
 - D-pad movement with a compact foot-level collision box.
 - Solid collision footprints for the entrance door, wardrobe, bedside cabinet, bed, and bookcase.
 - Context interaction button is A by default. If A is assigned to RUN, C becomes the interaction button.

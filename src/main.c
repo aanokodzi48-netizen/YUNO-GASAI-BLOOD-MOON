@@ -34,11 +34,12 @@ typedef enum
 
 /* Invisible floor-level collision footprints, aligned to the 320x224 room art. */
 static const RoomBlock roomBlocks[] = {
-    {  0, 138,  28,  39 }, /* entry door / frame */
-    { 43, 126,  62,  47 }, /* wardrobe base down to floor */
-    {178, 140,  45,  32 }, /* bedside cabinet base */
-    {216, 144, 102,  32 }, /* bed frame and base */
-    {287, 126,  33,  46 }  /* bookcase base */
+    {  8, 138,  42,  39 }, /* entry door */
+    { 54, 126,  51,  47 }, /* wardrobe base */
+    {169, 140,  45,  32 }, /* bedside cabinet base */
+    {207, 144, 108,  32 }, /* bed frame and base */
+    {280, 126,  36,  46 }, /* bookcase base */
+    {126, 130,  23,  36 }  /* floor plant */
 };
 
 static Sprite *yunoSprite = NULL;
@@ -315,8 +316,8 @@ static RoomObject getNearbyObject(void)
     s32 bestDistance = 0x7FFFFFFF;
     RoomObject nearest = ROOM_OBJECT_NONE;
 
-    distance = distanceSquared(centerX, centerY, 201, 143);
-    if ((distance <= (48L * 48L)) && (distance < bestDistance))
+    distance = distanceSquared(centerX, centerY, 191, 120);
+    if ((distance <= (50L * 50L)) && (distance < bestDistance))
     {
         bestDistance = distance;
         nearest = ROOM_OBJECT_LAMP;
@@ -329,8 +330,8 @@ static RoomObject getNearbyObject(void)
         nearest = ROOM_OBJECT_BED;
     }
 
-    distance = distanceSquared(centerX, centerY, 75, 144);
-    if ((distance <= (49L * 49L)) && (distance < bestDistance))
+    distance = distanceSquared(centerX, centerY, 80, 125);
+    if ((distance <= (50L * 50L)) && (distance < bestDistance))
     {
         bestDistance = distance;
         nearest = ROOM_OBJECT_WARDROBE;
