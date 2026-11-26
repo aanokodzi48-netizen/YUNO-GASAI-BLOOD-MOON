@@ -5,6 +5,7 @@
 #define PLAYER_MAX_X 286
 #define PLAYER_MIN_Y 76
 #define PLAYER_MAX_Y 166
+#define SPRITE_VRAM_TILES 128
 
 typedef enum
 {
@@ -15,7 +16,7 @@ typedef enum
     STATE_PAUSED
 } GameState;
 
-static Sprite *yunoSprite;
+static Sprite *yunoSprite = NULL;
 static bool spritesInitialized = FALSE;
 static s16 playerX = 144;
 static s16 playerY = 150;
@@ -46,63 +47,57 @@ static void drawLine(const char *label, u16 x, u16 y, bool selected)
     VDP_drawText(label, x, y);
 }
 
-static void clearMenuArea(void)
+static void clearTitleText(void)
 {
-    VDP_clearTextArea(7, 4, 26, 19);
+    VDP_clearTextArea(0, 18, 40, 10);
+}
+
+static bool drawTitleBackground(void)
+{
+    VDP_clearPlane(BG_A, TRUE);
+    VDP_clearPlane(BG_B, TRUE);
+    VDP_setTextPlane(BG_A);
+
+    if (!VDP_drawImageEx(BG_B, &title,
+                         TILE_ATTR_FULL(PAL0, FALSE, FALSE, FALSE, TILE_USER_INDEX),
+                         0, 0, TRUE, TRUE))
+        return FALSE;
+
+    /* Keep menu text palettes independent from the title artwork. */
+    PAL_setPalette(PAL1, goldPalette, DMA);
+    PAL_setPalette(PAL2, whitePalette, DMA);
+    VDP_setTextPalette(PAL2);
+    return TRUE;
+}
+
+static void showFatalError(const char *message)
+{
+    VDP_clearPlane(BG_A, TRUE);
+    VDP_clearPlane(BG_B, TRUE);
+    VDP_setTextPalette(PAL1);
+    VDP_drawText(message, 7, 13);
+    while (1)
+        SYS_doVBlankProcess();
 }
 
 static void drawSplash(void)
 {
-    VDP_clearTextArea(0, 0, 40, 28);
-    VDP_drawImageEx(BG_B, &splash,
-                    TILE_ATTR_FULL(PAL3, FALSE, FALSE, FALSE, TILE_USER_INDEX),
-                    0, 0, TRUE, TRUE);
+    if (!drawTitleBackground())
+        showFatalError("TITLE IMAGE ERROR");
+
+    clearTitleText();
     drawLine("PRESS START", 14, 26, TRUE);
     VDP_setTextPalette(PAL2);
 }
 
-static void showRoomBackground(void)
-{
-    VDP_clearTextArea(0, 0, 40, 28);
-    VDP_drawImageEx(BG_B, &room,
-                    TILE_ATTR_FULL(PAL3, FALSE, FALSE, FALSE, TILE_USER_INDEX),
-                    0, 0, TRUE, TRUE);
-}
-
-static void initializeGameSprites(void)
-{
-    SPR_init();
-    yunoSprite = SPR_addSprite(&yuno, playerX, playerY,
-                               TILE_ATTR(PAL0, TRUE, FALSE, FALSE));
-    if (yunoSprite == NULL)
-    {
-        VDP_drawText("SPRITE ERROR", 14, 13);
-        while (1) SYS_doVBlankProcess();
-    }
-
-    PAL_setPalette(PAL0, yuno.palette->data, DMA);
-    SPR_setVisibility(yunoSprite, HIDDEN);
-    spritesInitialized = TRUE;
-}
-
 static void drawMainMenu(void)
 {
-    clearMenuArea();
-    drawLine("+--------------------------+", 7, 5, FALSE);
-    drawLine("|       YUNO GASAI        |", 7, 6, TRUE);
-    drawLine("|        BLOOD MOON       |", 7, 7, FALSE);
-    drawLine("|                        |", 7, 8, FALSE);
-    drawLine("|                        |", 7, 9, FALSE);
-    drawLine("|                        |", 7, 10, FALSE);
-    drawLine("|                        |", 7, 11, FALSE);
-    drawLine("|                        |", 7, 12, FALSE);
-    drawLine("|                        |", 7, 13, FALSE);
-    drawLine("|                        |", 7, 14, FALSE);
-    drawLine("|                        |", 7, 15, FALSE);
-    drawLine("|                        |", 7, 16, FALSE);
-    drawLine("+--------------------------+", 7, 17, FALSE);
-    drawLine(mainSelection == 0 ? "> START" : "  START", 15, 11, mainSelection == 0);
-    drawLine(mainSelection == 1 ? "> SETTINGS" : "  SETTINGS", 14, 13, mainSelection == 1);
+    clearTitleText();
+    drawLine("YUNO GASAI: BLOOD MOON", 9, 20, FALSE);
+    drawLine(mainSelection == 0 ? "> START" : "  START",
+             16, 23, mainSelection == 0);
+    drawLine(mainSelection == 1 ? "> SETTINGS" : "  SETTINGS",
+             14, 25, mainSelection == 1);
     VDP_setTextPalette(PAL2);
 }
 
@@ -110,51 +105,58 @@ static void enterMainMenuFromSplash(void)
 {
     gameState = STATE_MAIN_MENU;
     mainSelection = 0;
+    navPrevious = 0;
+    navRepeat = 0;
 
-    /* Load the room first, then allocate sprite tiles so the background stays intact. */
-    showRoomBackground();
-    initializeGameSprites();
+    /* The menu stays on the Yuno title art; the room is not loaded yet. */
+    if (!drawTitleBackground())
+        showFatalError("TITLE IMAGE ERROR");
     drawMainMenu();
+}
+
+static void cycleRunButton(s16 direction)
+{
+    u16 next;
+
+    if (runButton == BUTTON_A)
+        next = (direction > 0) ? BUTTON_B : BUTTON_C;
+    else if (runButton == BUTTON_B)
+        next = (direction > 0) ? BUTTON_C : BUTTON_A;
+    else
+        next = (direction > 0) ? BUTTON_A : BUTTON_B;
+
+    runButton = next;
+}
+
+static char getButtonLetter(u16 button)
+{
+    if (button == BUTTON_A) return 'A';
+    if (button == BUTTON_B) return 'B';
+    return 'C';
 }
 
 static void drawSettings(void)
 {
     char line[32];
-    const char *buttonName = (runButton == BUTTON_A) ? "A" :
-                             (runButton == BUTTON_C) ? "C" : "B";
 
-    clearMenuArea();
-    drawLine("+--------------------------+", 7, 5, FALSE);
-    drawLine("|         SETTINGS        |", 7, 6, TRUE);
-    drawLine("|                        |", 7, 7, FALSE);
-    drawLine("|                        |", 7, 8, FALSE);
-    drawLine("|                        |", 7, 9, FALSE);
-    drawLine("|                        |", 7, 10, FALSE);
-    drawLine("|                        |", 7, 11, FALSE);
-    drawLine("|                        |", 7, 12, FALSE);
-    drawLine("|                        |", 7, 13, FALSE);
-    drawLine("|                        |", 7, 14, FALSE);
-    drawLine("|                        |", 7, 15, FALSE);
-    drawLine("|                        |", 7, 16, FALSE);
-    drawLine("+--------------------------+", 7, 17, FALSE);
+    clearTitleText();
+    drawLine("SETTINGS", 16, 18, FALSE);
 
-    sprintf(line, "%c RUN BUTTON: %s", settingsSelection == 0 ? '>' : ' ', buttonName);
-    drawLine(line, 11, 9, settingsSelection == 0);
-    drawLine(settingsSelection == 1 ? "> RESET DEFAULT" : "  RESET DEFAULT", 12, 11, settingsSelection == 1);
-    drawLine(settingsSelection == 2 ? "> BACK" : "  BACK", 16, 13, settingsSelection == 2);
-    drawLine("A: SELECT  B: BACK", 11, 15, FALSE);
-    drawLine("LEFT/RIGHT: CHANGE", 11, 16, FALSE);
+    sprintf(line, "%c RUN BUTTON: %c",
+            settingsSelection == 0 ? '>' : ' ',
+            getButtonLetter(runButton));
+    drawLine(line, 12, 21, settingsSelection == 0);
+
+    drawLine(settingsSelection == 1 ? "> RESET DEFAULT" : "  RESET DEFAULT",
+             12, 23, settingsSelection == 1);
+    drawLine(settingsSelection == 2 ? "> BACK" : "  BACK",
+             17, 25, settingsSelection == 2);
+
+    drawLine("A/START: SELECT  B: BACK", 8, 26, FALSE);
+    drawLine("LEFT/RIGHT: CHANGE", 11, 27, FALSE);
     VDP_setTextPalette(PAL2);
 }
 
-static void cycleRunButton(void)
-{
-    if (runButton == BUTTON_B) runButton = BUTTON_A;
-    else if (runButton == BUTTON_A) runButton = BUTTON_C;
-    else runButton = BUTTON_B;
-}
-
-/* Direction repeat: immediate on press, then repeat after a short delay. */
 static bool menuDirection(u16 pad, u16 *direction)
 {
     u16 current = pad & (BUTTON_UP | BUTTON_DOWN);
@@ -180,17 +182,74 @@ static bool menuDirection(u16 pad, u16 *direction)
         return FALSE;
     }
 
-    navRepeat = 8;
+    navRepeat = 7;
     *direction = current;
+    return TRUE;
+}
+
+static bool startGame(void)
+{
+    /* Reserve sprite VRAM before loading the room image.
+       This prevents background tiles and sprite tiles from overlapping. */
+    VDP_clearPlane(BG_A, TRUE);
+    VDP_clearPlane(BG_B, TRUE);
+    SPR_initEx(SPRITE_VRAM_TILES);
+    spritesInitialized = TRUE;
+
+    if (!VDP_drawImageEx(BG_B, &room,
+                         TILE_ATTR_FULL(PAL3, FALSE, FALSE, FALSE, TILE_USER_INDEX),
+                         0, 0, TRUE, TRUE))
+    {
+        SPR_end();
+        spritesInitialized = FALSE;
+        return FALSE;
+    }
+
+    playerX = 144;
+    playerY = 150;
+    animClock = 0;
+
+    yunoSprite = SPR_addSprite(&yuno, playerX, playerY,
+                               TILE_ATTR(PAL2, TRUE, FALSE, FALSE));
+    if (yunoSprite == NULL)
+    {
+        SPR_end();
+        spritesInitialized = FALSE;
+        return FALSE;
+    }
+
+    PAL_setPalette(PAL2, yuno.palette->data, DMA);
+    SPR_setVisibility(yunoSprite, VISIBLE);
+    gameState = STATE_PLAYING;
     return TRUE;
 }
 
 static void drawPause(void)
 {
     VDP_clearTextArea(12, 11, 16, 6);
-    drawLine("---- PAUSED ----", 13, 12, TRUE);
-    drawLine("START: RESUME", 13, 14, FALSE);
-    drawLine("B: MAIN MENU", 14, 16, FALSE);
+    VDP_setTextPalette(PAL1);
+    VDP_drawText("---- PAUSED ----", 13, 12);
+    VDP_drawText("START: RESUME", 14, 14);
+    VDP_drawText("B: MAIN MENU", 15, 16);
+}
+
+static void returnToMainMenu(void)
+{
+    if (spritesInitialized)
+    {
+        SPR_end();
+        spritesInitialized = FALSE;
+    }
+
+    yunoSprite = NULL;
+    gameState = STATE_MAIN_MENU;
+    mainSelection = 0;
+    navPrevious = 0;
+    navRepeat = 0;
+
+    if (!drawTitleBackground())
+        showFatalError("TITLE IMAGE ERROR");
+    drawMainMenu();
 }
 
 int main(bool hardReset)
@@ -199,17 +258,11 @@ int main(bool hardReset)
     s16 speed;
     (void) hardReset;
 
-    /* Explicitly initialize the joypad before the first menu input is sampled. */
-    JOY_init();
-    SYS_doVBlankProcess();
-    oldPad = JOY_readJoypad(JOY_1);
-
     VDP_setBackgroundColor(0);
-    PAL_setPalette(PAL1, goldPalette, DMA);
-    PAL_setPalette(PAL2, whitePalette, DMA);
-    VDP_setTextPalette(PAL2);
+    VDP_setTextPlane(BG_A);
 
-    /* The splash is drawn before SPR_init so its tiles cannot overwrite Yuno's sprite. */
+    /* SGDK initializes the joypad during system startup. */
+    oldPad = 0;
     drawSplash();
 
     while (1)
@@ -236,9 +289,8 @@ int main(bool hardReset)
             {
                 if (mainSelection == 0)
                 {
-                    gameState = STATE_PLAYING;
-                    VDP_clearTextArea(0, 0, 40, 28);
-                    SPR_setVisibility(yunoSprite, VISIBLE);
+                    if (!startGame())
+                        showFatalError("ROOM OR SPRITE ERROR");
                 }
                 else
                 {
@@ -270,16 +322,21 @@ int main(bool hardReset)
                     drawSettings();
                 }
 
-                if ((pressed & (BUTTON_LEFT | BUTTON_RIGHT)) && settingsSelection == 0)
+                if ((pressed & BUTTON_LEFT) && settingsSelection == 0)
                 {
-                    cycleRunButton();
+                    cycleRunButton(-1);
+                    drawSettings();
+                }
+                else if ((pressed & BUTTON_RIGHT) && settingsSelection == 0)
+                {
+                    cycleRunButton(1);
                     drawSettings();
                 }
                 else if (pressed & (BUTTON_A | BUTTON_START))
                 {
                     if (settingsSelection == 0)
                     {
-                        cycleRunButton();
+                        cycleRunButton(1);
                         drawSettings();
                     }
                     else if (settingsSelection == 1)
@@ -307,6 +364,7 @@ int main(bool hardReset)
             else
             {
                 speed = (pad & runButton) ? 2 : 1;
+
                 if (pad & BUTTON_LEFT)  playerX -= speed;
                 if (pad & BUTTON_RIGHT) playerX += speed;
                 if (pad & BUTTON_UP)    playerY -= speed;
@@ -335,10 +393,7 @@ int main(bool hardReset)
             }
             else if (pressed & BUTTON_B)
             {
-                SPR_setVisibility(yunoSprite, HIDDEN);
-                gameState = STATE_MAIN_MENU;
-                mainSelection = 0;
-                drawMainMenu();
+                returnToMainMenu();
             }
         }
 

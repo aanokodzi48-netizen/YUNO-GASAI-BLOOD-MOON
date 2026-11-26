@@ -1,34 +1,32 @@
 # YUNO GASAI: BLOOD MOON
 
-A Mega Drive / Genesis action-game prototype built with SGDK.
+A Mega Drive / Genesis game prototype built with SGDK.
 
-## First playable prototype
+## Current flow
 
-- Title screen and restart flow
-- Player movement, running, jumping, and crouching
-- A-button punch and C-button kick
-- Approaching ninja enemy with health and contact damage
-- Three enemy waves, pause, game-over, and victory screens
-- Designed for a standard Mega Drive controller and MD.emu
+1. Yuno title splash.
+2. Main menu with START and SETTINGS.
+3. Settings currently allow changing the RUN button between A, B and C, or restoring the default.
+4. START loads the bedroom scene and the player.
 
-## Controls
+The title artwork is stored as a 320x224, 4-bit indexed PNG with 16 Mega Drive-compatible palette colors.
+
+## Current controls
 
 | Input | Action |
 |---|---|
-| D-pad Left / Right | Move |
-| D-pad Up | Jump |
-| D-pad Down | Crouch |
-| A | Punch |
-| C | Kick |
-| Hold B + Left / Right | Run |
-| START | Start / Pause |
+| D-pad | Move around the room |
+| Configurable A/B/C button | Run |
+| START | Confirm on splash/menu; pause in game |
+| A | Confirm menu/settings selection |
+| B | Back from settings or pause |
 
 ## Build and download
 
-The GitHub Actions workflow builds SGDK with the Marsdev toolchain. On a successful run it publishes the ROM, checksum, and MD.emu ZIP as downloadable workflow artifacts.
+GitHub Actions builds SGDK with the Marsdev toolchain. A successful run publishes the ROM, checksum, and MD.emu ZIP as workflow artifacts.
 
 Expected ROM output: `out/rom.bin`.
 
 ## Development status
 
-This is the first mechanics prototype, not the finished art/audio-rich game. Character animation, detailed stages, Russian story scenes, music, and voice reactions remain future development tasks. The ROM must pass the automated build before it can be called compiled; it still needs an emulator play-test before it can be called tested.
+This is an evolving prototype. The home scene, character art, object interactions, and persistent control settings will be developed in later steps. A successful build still needs an emulator play-test before it can be called tested.
