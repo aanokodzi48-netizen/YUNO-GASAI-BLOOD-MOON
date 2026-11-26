@@ -416,8 +416,10 @@ def make_ui_tiles():
         # Hard-threshold the glyph for crisp 1-bit pixel edges.
         for gy in range(8):
             for gx in range(8):
-                if glyph.getpixel((gx, gy)) >= 96:
-                    im.putpixel((x + gx, y + gy), UI_PALETTE[1])
+                # Each glyph cell carries the same opaque panel fill behind
+                # the white pixels; background index 0 is transparent on MD.
+                color = UI_PALETTE[1] if glyph.getpixel((gx, gy)) >= 96 else UI_PALETTE[3]
+                im.putpixel((x + gx, y + gy), color)
     return im
 
 def main():
