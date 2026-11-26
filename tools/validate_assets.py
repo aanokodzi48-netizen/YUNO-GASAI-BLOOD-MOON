@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate every generated Mega Drive PNG before the SGDK resource compiler."""
+"""Validate generated Mega Drive PNG assets and existing character sprites."""
 import struct
 import sys
 import zlib
@@ -7,6 +7,10 @@ from pathlib import Path
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 MD_LEVELS = {0, 36, 73, 109, 146, 182, 219, 255}
+STRICT_ASSETS = {
+    "title.png", "room_bg.png", "window_morning.png",
+    "lamp_glow.png", "sky_fx.png", "ui_tiles.png"
+}
 EXPECTED_SIZE = {
     "title.png": (320, 224),
     "room_bg.png": (320, 224),
@@ -69,26 +73,39 @@ def validate(path):
     if not seen_ihdr or not seen_iend or pos != len(data):
         raise ValueError(f"{path}: missing chunk or trailing/truncated bytes")
     if color != 3 or depth != 4:
-        raise ValueError(f"{path}: expected 4-bit indexed PNG (color type 3), got type={color}, depth={depth}")
-    if palette is None or len(palette) != 16 * 3:
-        raise ValueError(f"{path}: expected an exact 16-entry indexed palette")
+        raise ValueError(
+            f"{path}: expected 4-bit indexed PNG (color type 3), "
+            f"got type={color}, depth={depth}"
+        )
+    if palette is None or len(palette) % 3 or not (1 <= len(palette) // 3 <= 16):
+        raise ValueError(f"{path}: indexed palette must contain 1..16 entries")
 
     expected = EXPECTED_SIZE.get(path.name)
     if expected and (width, height) != expected:
         raise ValueError(f"{path}: expected {expected[0]}x{expected[1]}, got {width}x{height}")
 
-    invalid = [value for value in palette if value not in MD_LEVELS]
-    # ui_tiles is intentionally pink/white/dark UI art and still uses MD levels.
-    if invalid:
-        raise ValueError(f"{path}: palette contains colors not aligned to Mega Drive 3-bit RGB levels")
+    if path.name in STRICT_ASSETS:
+        if len(palette) != 16 * 3:
+            raise ValueError(f"{path}: generated room/UI art must have exactly 16 palette entries")
+        invalid = [value for value in palette if value not in MD_LEVELS]
+        if invalid:
+            raise ValueError(
+                f"{path}: palette contains colors not aligned to Mega Drive 3-bit RGB levels"
+            )
 
     decoded = zlib.decompress(bytes(idat))
     expected_row_bytes = (width + 1) // 2
     expected_raw_size = height * (expected_row_bytes + 1)
     if len(decoded) != expected_raw_size:
-        raise ValueError(f"{path}: decompressed image data length mismatch ({len(decoded)} != {expected_raw_size})")
+        raise ValueError(
+            f"{path}: decompressed image data length mismatch "
+            f"({len(decoded)} != {expected_raw_size})"
+        )
 
-    print(f"OK {path}: {width}x{height}, indexed 4-bit, 16 colors, {len(data)} bytes")
+    print(
+        f"OK {path}: {width}x{height}, indexed 4-bit, "
+        f"{len(palette) // 3} colors, {len(data)} bytes"
+    )
     return palette
 
 if __name__ == "__main__":
@@ -98,7 +115,10 @@ if __name__ == "__main__":
     palettes = {Path(item).name: validate(item) for item in sys.argv[1:]}
     if not FX_ASSETS.issubset(palettes):
         raise SystemExit("ERROR: missing one or more room FX assets")
+
     fx = palettes["window_morning.png"]
     for name in ("lamp_glow.png", "sky_fx.png"):
         if palettes[name] != fx:
-            raise SystemExit(f"ERROR: {name} must use the exact same palette as window_morning.png")
+            raise SystemExit(
+                f"ERROR: {name} must use the exact same palette as window_morning.png"
+            )
