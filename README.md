@@ -6,20 +6,20 @@ A Mega Drive / Genesis game prototype built with SGDK.
 
 1. Yuno title splash.
 2. Main menu with START and SETTINGS.
-3. Settings currently allow changing the RUN button between A, B and C, or restoring the default.
-4. START loads the bedroom scene and the player.
+3. Settings let the player assign the RUN action to A, B, or C.
+4. START loads Yuno's bedroom.
 
-The title artwork is stored as a 320x224, 4-bit indexed PNG with 16 Mega Drive-compatible palette colors.
+## Bedroom prototype
 
-## Current controls
+- 320x224 4-bit indexed Mega Drive room backgrounds, with the bedside lamp on/off variants using the same 16-color palette.
+- D-pad movement with a compact foot-level collision box.
+- Solid collision footprints for the entrance door, wardrobe, bedside cabinet, bed, and bookcase.
+- Context interaction button is A by default. If A is assigned to RUN, C becomes the interaction button.
+- Lamp can be toggled on/off.
+- Bed starts a short rest sequence.
+- Wardrobe is present and solid; outfit selection is planned for a later update.
 
-| Input | Action |
-|---|---|
-| D-pad | Move around the room |
-| Configurable A/B/C button | Run |
-| START | Confirm on splash/menu; pause in game |
-| A | Confirm menu/settings selection |
-| B | Back from settings or pause |
+The current small placeholder Yuno sprite is intentionally unchanged. A taller character sprite and clothing sets will be a separate later milestone.
 
 ## Build and download
 
@@ -27,6 +27,4 @@ GitHub Actions builds SGDK with the Marsdev toolchain. A successful run publishe
 
 Expected ROM output: `out/rom.bin`.
 
-## Development status
-
-This is an evolving prototype. The home scene, character art, object interactions, and persistent control settings will be developed in later steps. A successful build still needs an emulator play-test before it can be called tested.
+A successful build still needs an emulator play-test before it can be called tested.

@@ -41,7 +41,7 @@ jobs:
           sudo make install
 
       - name: Validate indexed assets
-        run: python3 tools/validate_assets.py res/yuno.png res/room_bg.png res/title.png
+        run: python3 tools/validate_assets.py res/yuno.png res/room_on.png res/room_off.png res/title.png
 
       - name: Compile game ROM
         shell: bash
