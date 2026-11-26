@@ -145,46 +145,95 @@ def build_room():
         d.rectangle((x, y, x + 3, y + 15), fill=C[col])
     d.rectangle((278, 136, 318, 142), fill=C[8])
 
-    # Bed moved to the right: normal furniture proportions, cream linens.
-    d.rectangle((207, 113, 315, 171), fill=C[8])
-    d.rectangle((212, 118, 310, 165), fill=C[9])
-    d.rectangle((218, 124, 301, 160), fill=C[13])
-    d.rectangle((219, 123, 302, 130), fill=C[14])
-    d.rectangle((220, 134, 301, 159), fill=C[12])
-    d.rectangle((220, 143, 301, 158), fill=C[6])
-    d.rectangle((222, 145, 298, 156), fill=C[7])
-    d.rectangle((225, 126, 250, 138), fill=C[14])
-    d.rectangle((227, 128, 248, 136), fill=C[15])
-    d.line((252, 144, 252, 156), fill=C[13], width=2)
-    d.rectangle((207, 162, 315, 171), fill=C[8])
-    d.rectangle((212, 168, 218, 175), fill=C[9])
-    d.rectangle((302, 168, 309, 175), fill=C[9])
-    d.rectangle((294, 102, 315, 171), fill=C[8])
-    d.rectangle((298, 107, 311, 160), fill=C[10])
-    d.line((298, 112, 311, 112), fill=C[12], width=2)
+    # Detailed side-view bed: carved headboard, layered mattress and quilt.
+    d.ellipse((202, 164, 317, 181), fill=C[8])
+    d.rectangle((293, 101, 317, 173), fill=C[8])
+    d.rectangle((297, 105, 313, 168), fill=C[10])
+    d.rectangle((300, 108, 310, 165), fill=C[12])
+    d.line((299, 111, 311, 111), fill=C[14], width=2)
+    d.line((299, 163, 311, 163), fill=C[9], width=2)
+    d.rectangle((302, 118, 305, 151), fill=C[9])
+    d.rectangle((207, 120, 302, 171), fill=C[8])
+    d.rectangle((210, 123, 298, 164), fill=C[9])
+    d.rectangle((213, 125, 296, 160), fill=C[14])
+    d.line((215, 126, 294, 126), fill=C[15], width=2)
+    d.line((214, 159, 296, 159), fill=C[12], width=2)
+    # Pillow with piping and soft highlight.
+    d.rectangle((220, 128, 251, 143), fill=C[12])
+    d.rectangle((222, 129, 249, 140), fill=C[15])
+    d.line((224, 131, 247, 131), fill=C[14], width=2)
+    d.line((224, 139, 247, 139), fill=C[13])
+    d.line((251, 131, 251, 139), fill=C[12])
+    # Folded mauve blanket, stitched edge and small quilt diamonds.
+    d.polygon([(252, 132), (294, 132), (296, 157), (286, 162),
+               (253, 158)], fill=C[5])
+    d.polygon([(255, 135), (291, 135), (292, 153), (285, 157),
+               (256, 154)], fill=C[6])
+    d.line((256, 137, 289, 137), fill=C[7], width=2)
+    d.line((257, 154, 285, 157), fill=C[4])
+    for x, y in ((263, 143), (275, 143), (285, 145)):
+        d.polygon([(x, y-3), (x+3, y), (x, y+3), (x-3, y)], fill=C[7])
+        d.point((x, y), fill=C[14])
+    d.line((254, 157, 291, 160), fill=C[4], width=2)
+    # Polished frame rail and sturdy feet.
+    d.rectangle((207, 160, 300, 169), fill=C[8])
+    d.line((211, 162, 296, 162), fill=C[11])
+    d.rectangle((213, 168, 220, 177), fill=C[8])
+    d.rectangle((291, 168, 299, 177), fill=C[8])
+    d.line((215, 170, 215, 175), fill=C[11])
+    d.line((294, 170, 294, 175), fill=C[11])
+    d.rectangle((210, 177, 302, 180), fill=C[9])
 
-    # Bedside cabinet and lamp.
+    # Bedside cabinet with a crafted ceramic lamp (OFF state).
     d.rectangle((169, 130, 212, 165), fill=C[8])
     d.rectangle((173, 134, 208, 160), fill=C[10])
-    d.rectangle((176, 138, 205, 143), fill=C[9])
-    d.rectangle((177, 147, 204, 157), fill=C[9])
-    d.rectangle((185, 149, 196, 154), fill=C[8])
+    d.line((174, 135, 207, 135), fill=C[11], width=2)
+    d.rectangle((176, 139, 205, 144), fill=C[9])
+    d.rectangle((177, 148, 204, 157), fill=C[9])
+    d.rectangle((185, 150, 196, 154), fill=C[8])
     d.rectangle((171, 161, 210, 167), fill=C[8])
-    d.rectangle((187, 114, 194, 132), fill=C[8])
-    d.rectangle((184, 128, 198, 132), fill=C[11])
-    d.polygon([(180, 119), (184, 102), (198, 102), (202, 119)], fill=C[11])
-    d.rectangle((184, 104, 198, 107), fill=C[15])
-    d.rectangle((187, 119, 195, 126), fill=C[14])
+    d.line((174, 162, 207, 162), fill=C[11])
+    # Brass foot, narrow stem and flared fabric shade.
+    d.rectangle((183, 126, 199, 131), fill=C[8])
+    d.rectangle((188, 116, 194, 128), fill=C[9])
+    d.line((189, 117, 189, 126), fill=C[11])
+    d.polygon([(179, 116), (183, 101), (199, 101), (204, 116),
+               (199, 121), (184, 121)], fill=C[8])
+    d.polygon([(182, 114), (185, 104), (197, 104), (201, 114),
+               (197, 118), (186, 118)], fill=C[9])
+    d.line((185, 105, 197, 105), fill=C[12], width=2)
+    d.line((184, 116, 199, 116), fill=C[10], width=2)
+    d.rectangle((188, 121, 195, 125), fill=C[11])
 
-    # Front rug and small plant near the window.
-    d.rectangle((70, 174, 302, 211), fill=C[8])
-    d.rectangle((74, 178, 298, 207), fill=C[12])
-    d.rectangle((79, 182, 293, 203), fill=C[13])
-    d.rectangle((84, 186, 288, 199), fill=C[12])
-    d.line((84, 187, 287, 187), fill=C[14])
-    d.line((84, 198, 287, 198), fill=C[14])
-    for x in range(90, 286, 24):
-        d.rectangle((x, 191, x + 7, 194), fill=C[7])
+    # Large woven plum rug with a double border, tassels and floral medallion.
+    d.rectangle((67, 174, 305, 214), fill=C[8])
+    d.rectangle((70, 176, 302, 211), fill=C[5])
+    d.rectangle((74, 179, 298, 208), fill=C[6])
+    d.rectangle((78, 182, 294, 205), fill=C[4])
+    d.rectangle((82, 185, 290, 202), fill=C[5])
+    d.rectangle((86, 188, 286, 199), fill=C[6])
+    d.line((74, 180, 298, 180), fill=C[7], width=2)
+    d.line((74, 207, 298, 207), fill=C[2], width=2)
+    d.line((77, 183, 295, 183), fill=C[7])
+    d.line((77, 204, 295, 204), fill=C[7])
+    # Woven side motifs and corner ornaments.
+    for x in range(88, 288, 16):
+        d.polygon([(x, 184), (x+3, 187), (x, 190), (x-3, 187)], fill=C[11])
+        d.polygon([(x, 197), (x+3, 200), (x, 203), (x-3, 200)], fill=C[11])
+    for x in (80, 284):
+        for y in (185, 199):
+            d.rectangle((x, y, x+4, y+3), fill=C[7])
+            d.point((x+2, y+1), fill=C[14])
+    # Central ornamental medallion.
+    d.ellipse((158, 185, 214, 201), fill=C[4])
+    d.ellipse((163, 187, 209, 199), fill=C[5])
+    d.polygon([(186, 186), (197, 193), (186, 200), (175, 193)], fill=C[11])
+    d.polygon([(186, 189), (192, 193), (186, 197), (180, 193)], fill=C[7])
+    d.rectangle((184, 192, 188, 194), fill=C[14])
+    # Short fringe along both long edges.
+    for x in range(76, 300, 8):
+        d.line((x, 211, x+2, 214), fill=C[12])
+        d.line((x, 174, x+2, 176), fill=C[12])
     d.rectangle((118, 126, 137, 141), fill=C[8])
     d.rectangle((121, 129, 134, 138), fill=C[4])
     d.rectangle((127, 111, 131, 129), fill=C[15])
@@ -198,12 +247,21 @@ def build_room():
 def make_on_variant(base):
     on = base.copy()
     d = ImageDraw.Draw(on)
-    d.rectangle((168, 114, 211, 135), fill=C[12])
-    d.rectangle((173, 110, 207, 132), fill=C[13])
-    d.rectangle((179, 107, 201, 126), fill=C[14])
-    d.polygon([(179, 111), (184, 101), (198, 101), (203, 111)], fill=C[11])
-    d.rectangle((184, 103, 198, 107), fill=C[15])
-    d.rectangle((188, 117, 194, 128), fill=C[15])
+    # Warm stepped pools of light around the shade, not a pink screen tint.
+    d.polygon([(177, 101), (181, 94), (201, 94), (207, 101),
+               (211, 117), (205, 130), (177, 130), (171, 117)],
+              fill=C[11])
+    d.polygon([(180, 103), (185, 98), (198, 98), (203, 104),
+               (206, 116), (200, 125), (181, 125), (176, 116)],
+              fill=C[12])
+    d.polygon([(182, 114), (185, 103), (197, 103), (201, 114),
+               (197, 119), (186, 119)], fill=C[14])
+    d.line((185, 104, 197, 104), fill=C[15], width=2)
+    d.rectangle((188, 120, 194, 128), fill=C[15])
+    d.rectangle((184, 128, 198, 132), fill=C[11])
+    # A subtle warm reflection on the cabinet top and floor.
+    d.line((174, 133, 206, 133), fill=C[13], width=2)
+    d.line((180, 168, 201, 168), fill=C[11])
     return on
 
 def indexed_png(image, path, palette_image):
