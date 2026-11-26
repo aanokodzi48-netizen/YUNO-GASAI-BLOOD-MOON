@@ -64,8 +64,7 @@ def build_room():
     d.rectangle((102, 71, 214, 97), fill=C[3])
     d.line((102, 51, 214, 51), fill=C[4])
     d.line((102, 69, 214, 69), fill=C[4])
-    d.ellipse((177, 37, 196, 56), fill=C[14])
-    d.ellipse((184, 32, 201, 52), fill=C[1])
+    # The moon is a separate sprite so it can be replaced by a sun after sleep.
     for x, y in ((117, 43), (146, 38), (206, 61), (132, 78)):
         d.rectangle((x, y, x + 2, y + 2), fill=C[14])
 
@@ -244,46 +243,191 @@ def build_room():
 
     return im
 
-def make_on_variant(base):
-    on = base.copy()
-    d = ImageDraw.Draw(on)
-    # Warm stepped pools of light around the shade, not a pink screen tint.
-    d.polygon([(177, 101), (181, 94), (201, 94), (207, 101),
-               (211, 117), (205, 130), (177, 130), (171, 117)],
-              fill=C[11])
-    d.polygon([(180, 103), (185, 98), (198, 98), (203, 104),
-               (206, 116), (200, 125), (181, 125), (176, 116)],
-              fill=C[12])
-    d.polygon([(182, 114), (185, 103), (197, 103), (201, 114),
-               (197, 119), (186, 119)], fill=C[14])
-    d.line((185, 104, 197, 104), fill=C[15], width=2)
-    d.rectangle((188, 120, 194, 128), fill=C[15])
-    d.rectangle((184, 128, 198, 132), fill=C[11])
-    # A subtle warm reflection on the cabinet top and floor.
-    d.line((174, 133, 206, 133), fill=C[13], width=2)
-    d.line((180, 168, 201, 168), fill=C[11])
-    return on
+# Separate FX palette shared by the lamp glow and the movable moon/sun sprite.
+FX_PALETTE = [
+    (0, 0, 0),          # transparent
+    (36, 36, 73),       # deep shadow
+    (73, 73, 109),      # blue-violet shade
+    (109, 146, 182),    # morning sky
+    (146, 182, 219),    # pale morning sky
+    (219, 146, 73),     # warm amber
+    (255, 219, 146),    # sun / lamp highlight
+    (219, 219, 182),    # warm cream
+    (73, 73, 73),       # tree shadow
+    (36, 73, 73),       # roof shadow
+    (73, 109, 73),      # tree midtone
+    (109, 146, 109),   # tree highlight
+    (146, 109, 73),    # warm wood
+    (182, 146, 109),   # pale wood
+    (255, 255, 219),   # moon / bright light
+    (219, 182, 109),   # soft gold
+]
 
-def indexed_png(image, path, palette_image):
+UI_PALETTE = [
+    (0, 0, 0),          # transparent
+    (255, 255, 219),    # text
+    (219, 109, 182),    # rose border
+    (0, 0, 36),         # panel fill
+    (73, 36, 109),
+    (146, 73, 146),
+    (219, 182, 146),
+    (255, 219, 182),
+    (0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0),
+    (0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0),
+]
+
+RUSSIAN_GLYPHS = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
+EXTRA_GLYPHS = "ABC0123456789:.-!"
+GLYPHS = RUSSIAN_GLYPHS + EXTRA_GLYPHS + " "
+
+def make_palette_image(palette):
+    raw = []
+    for rgb in palette:
+        raw.extend(rgb)
+    raw.extend([0] * (768 - len(raw)))
+    result = Image.new("P", (16, 1))
+    result.putpalette(raw)
+    return result
+
+def indexed_png(image, path, palette):
+    palette_image = make_palette_image(palette)
     indexed = image.quantize(palette=palette_image, dither=Image.Dither.NONE)
     indexed.save(path, format="PNG", bits=4, optimize=False, compress_level=9)
 
+def make_morning_window():
+    """112x64 window view; drawn as a separate tile layer for instant day/night swaps."""
+    im = Image.new("RGB", (112, 64), FX_PALETTE[3])
+    d = ImageDraw.Draw(im)
+
+    # Pale early-morning sky with a warm horizon.
+    d.rectangle((0, 0, 111, 63), fill=FX_PALETTE[3])
+    d.rectangle((0, 0, 111, 18), fill=FX_PALETTE[4])
+    d.rectangle((0, 19, 111, 34), fill=FX_PALETTE[3])
+    d.rectangle((0, 35, 111, 63), fill=FX_PALETTE[2])
+    d.rectangle((0, 31, 111, 39), fill=FX_PALETTE[5])
+    d.rectangle((0, 34, 111, 37), fill=FX_PALETTE[6])
+
+    # Soft sunrise and a few thin clouds.
+    d.ellipse((75, 4, 94, 23), fill=FX_PALETTE[5])
+    d.ellipse((78, 6, 91, 19), fill=FX_PALETTE[6])
+    d.rectangle((14, 14, 31, 16), fill=FX_PALETTE[4])
+    d.rectangle((20, 12, 38, 14), fill=FX_PALETTE[4])
+    d.rectangle((52, 23, 66, 25), fill=FX_PALETTE[4])
+    d.rectangle((58, 21, 73, 23), fill=FX_PALETTE[4])
+
+    # Distant rooftops and trees.
+    d.polygon([(0, 43), (12, 31), (26, 42), (37, 35), (50, 44),
+               (65, 34), (83, 44), (98, 33), (111, 43), (111, 63), (0, 63)],
+              fill=FX_PALETTE[9])
+    d.rectangle((0, 48, 111, 63), fill=FX_PALETTE[8])
+    for x, y in ((5, 39), (16, 35), (25, 40), (87, 38), (98, 34), (105, 40)):
+        d.rectangle((x, y, x + 7, y + 6), fill=FX_PALETTE[10])
+        d.rectangle((x + 2, y + 2, x + 5, y + 5), fill=FX_PALETTE[11])
+
+    # Small houses with lit windows.
+    d.polygon([(28, 47), (42, 37), (56, 47), (56, 63), (28, 63)], fill=FX_PALETTE[9])
+    d.polygon([(68, 47), (82, 36), (97, 47), (97, 63), (68, 63)], fill=FX_PALETTE[9])
+    for x, y in ((35, 50), (47, 51), (75, 50), (86, 50)):
+        d.rectangle((x, y, x + 4, y + 6), fill=FX_PALETTE[5])
+        d.rectangle((x + 1, y + 1, x + 3, y + 5), fill=FX_PALETTE[6])
+
+    # Window sash: vertical and horizontal bars.
+    d.rectangle((46, 0, 50, 63), fill=FX_PALETTE[12])
+    d.rectangle((0, 31, 111, 35), fill=FX_PALETTE[12])
+    d.line((47, 1, 47, 62), fill=FX_PALETTE[13])
+    d.line((1, 32, 110, 32), fill=FX_PALETTE[13])
+    return im
+
+def make_lamp_glow():
+    """32x32 transparent halo. Lamp body itself remains part of the room background."""
+    im = Image.new("RGB", (32, 32), FX_PALETTE[0])
+    d = ImageDraw.Draw(im)
+    d.ellipse((3, 2, 28, 28), outline=FX_PALETTE[5], width=2)
+    d.ellipse((6, 5, 25, 25), outline=FX_PALETTE[15], width=2)
+    d.arc((8, 3, 24, 21), 190, 350, fill=FX_PALETTE[6], width=2)
+    d.arc((1, 7, 30, 31), 195, 345, fill=FX_PALETTE[5], width=1)
+    # Keep the center transparent so the original lamp shade remains visible.
+    return im
+
+def make_sky_fx():
+    """Two 16x16 frames: crescent moon and morning sun."""
+    im = Image.new("RGB", (32, 16), FX_PALETTE[0])
+    d = ImageDraw.Draw(im)
+    # Frame 0: moon.
+    d.ellipse((2, 1, 14, 13), fill=FX_PALETTE[14])
+    d.ellipse((7, -1, 17, 10), fill=FX_PALETTE[0])
+    d.point((2, 2), fill=FX_PALETTE[7])
+    # Frame 1: sun with short stepped rays.
+    ox = 16
+    d.rectangle((ox + 6, 1, ox + 9, 3), fill=FX_PALETTE[5])
+    d.rectangle((ox + 6, 12, ox + 9, 14), fill=FX_PALETTE[5])
+    d.rectangle((ox + 1, 6, ox + 3, 9), fill=FX_PALETTE[5])
+    d.rectangle((ox + 12, 6, ox + 14, 9), fill=FX_PALETTE[5])
+    d.ellipse((ox + 4, 4, ox + 11, 11), fill=FX_PALETTE[6])
+    d.point((ox + 7, 5), fill=FX_PALETTE[14])
+    return im
+
+def make_ui_tiles():
+    """16x4 tile atlas: 10 panel tiles followed by fixed 8x8 Cyrillic glyphs."""
+    im = Image.new("RGB", (128, 32), UI_PALETTE[0])
+
+    def tile_origin(index):
+        return ((index % 16) * 8, (index // 16) * 8)
+
+    # Tile 0 remains transparent.
+    def tile_draw(index, draw_fn):
+        x, y = tile_origin(index)
+        draw_fn(ImageDraw.Draw(im), x, y)
+
+    tile_draw(1, lambda d, x, y: d.rectangle((x, y, x + 7, y + 7), fill=UI_PALETTE[3]))
+    tile_draw(2, lambda d, x, y: (d.rectangle((x, y, x + 7, y + 7), fill=UI_PALETTE[3]),
+                                  d.rectangle((x, y, x + 7, y + 1), fill=UI_PALETTE[2])))
+    tile_draw(3, lambda d, x, y: (d.rectangle((x, y, x + 7, y + 7), fill=UI_PALETTE[3]),
+                                  d.rectangle((x, y + 6, x + 7, y + 7), fill=UI_PALETTE[2])))
+    tile_draw(4, lambda d, x, y: (d.rectangle((x, y, x + 7, y + 7), fill=UI_PALETTE[3]),
+                                  d.rectangle((x, y, x + 1, y + 7), fill=UI_PALETTE[2])))
+    tile_draw(5, lambda d, x, y: (d.rectangle((x, y, x + 7, y + 7), fill=UI_PALETTE[3]),
+                                  d.rectangle((x + 6, y, x + 7, y + 7), fill=UI_PALETTE[2])))
+    tile_draw(6, lambda d, x, y: (d.rectangle((x, y, x + 7, y + 7), fill=UI_PALETTE[3]),
+                                  d.rectangle((x, y, x + 7, y + 1), fill=UI_PALETTE[2]),
+                                  d.rectangle((x, y, x + 1, y + 7), fill=UI_PALETTE[2])))
+    tile_draw(7, lambda d, x, y: (d.rectangle((x, y, x + 7, y + 7), fill=UI_PALETTE[3]),
+                                  d.rectangle((x, y, x + 7, y + 1), fill=UI_PALETTE[2]),
+                                  d.rectangle((x + 6, y, x + 7, y + 7), fill=UI_PALETTE[2])))
+    tile_draw(8, lambda d, x, y: (d.rectangle((x, y, x + 7, y + 7), fill=UI_PALETTE[3]),
+                                  d.rectangle((x, y + 6, x + 7, y + 7), fill=UI_PALETTE[2]),
+                                  d.rectangle((x, y, x + 1, y + 7), fill=UI_PALETTE[2])))
+    tile_draw(9, lambda d, x, y: (d.rectangle((x, y, x + 7, y + 7), fill=UI_PALETTE[3]),
+                                  d.rectangle((x, y + 6, x + 7, y + 7), fill=UI_PALETTE[2]),
+                                  d.rectangle((x + 6, y, x + 7, y + 7), fill=UI_PALETTE[2])))
+
+    font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
+    if not Path(font_path).exists():
+        font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
+    font = ImageFont.truetype(font_path, 8)
+
+    for i, char in enumerate(GLYPHS):
+        tile = 10 + i
+        x, y = tile_origin(tile)
+        glyph = Image.new("L", (8, 8), 0)
+        gd = ImageDraw.Draw(glyph)
+        if char != " ":
+            gd.text((0, -2), char, font=font, fill=255, stroke_width=0)
+        # Hard-threshold the glyph for crisp 1-bit pixel edges.
+        for gy in range(8):
+            for gx in range(8):
+                if glyph.getpixel((gx, gy)) >= 96:
+                    im.putpixel((x + gx, y + gy), UI_PALETTE[1])
+    return im
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
-    palette_bytes = []
-    for rgb in PALETTE:
-        palette_bytes.extend(rgb)
-    palette_bytes.extend([0] * (768 - len(palette_bytes)))
-    palette_image = Image.new("P", (16, 1))
-    palette_image.putpalette(palette_bytes)
-
-    base = build_room()
-    on = make_on_variant(base)
-    off = ImageEnhance.Brightness(base).enhance(0.72)
-
-    indexed_png(on, OUT / "room_on.png", palette_image)
-    indexed_png(off, OUT / "room_off.png", palette_image)
-    print("Generated room_on.png and room_off.png at 320x224, 4-bit indexed, 16-entry palette.")
+    indexed_png(build_room(), OUT / "room_bg.png", PALETTE)
+    indexed_png(make_morning_window(), OUT / "window_morning.png", FX_PALETTE)
+    indexed_png(make_lamp_glow(), OUT / "lamp_glow.png", FX_PALETTE)
+    indexed_png(make_sky_fx(), OUT / "sky_fx.png", FX_PALETTE)
+    indexed_png(make_ui_tiles(), OUT / "ui_tiles.png", UI_PALETTE)
+    print("Generated room, morning window, lamp glow, moon/sun sprites, and Russian UI tile/font atlas.")
 
 if __name__ == "__main__":
     main()

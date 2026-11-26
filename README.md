@@ -15,8 +15,8 @@ A Mega Drive / Genesis game prototype built with SGDK.
 - D-pad movement with a compact foot-level collision box.
 - Solid collision footprints for the entrance door, wardrobe, bedside cabinet, bed, and bookcase.
 - Context interaction button is A by default. If A is assigned to RUN, C becomes the interaction button.
-- Lamp can be toggled on/off.
-- Bed starts a short rest sequence.
+- Lamp can be toggled on/off without reloading the room background.
+- Bed starts a short rest sequence, turns the lamp off, and transitions the window view to morning.
 - Wardrobe is present and solid; outfit selection is planned for a later update.
 
 The current small placeholder Yuno sprite is intentionally unchanged. A taller character sprite and clothing sets will be a separate later milestone.
