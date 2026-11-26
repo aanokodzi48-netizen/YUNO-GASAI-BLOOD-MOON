@@ -8,6 +8,7 @@
 
 typedef enum
 {
+    STATE_SPLASH,
     STATE_MAIN_MENU,
     STATE_SETTINGS,
     STATE_PLAYING,
@@ -22,7 +23,9 @@ static u16 oldPad = 0;
 static u16 runButton = BUTTON_B;
 static u8 mainSelection = 0;
 static u8 settingsSelection = 0;
-static GameState gameState = STATE_MAIN_MENU;
+static u16 navPrevious = 0;
+static u8 navRepeat = 0;
+static GameState gameState = STATE_SPLASH;
 
 static const u16 goldPalette[16] = {
     0x000,0x000,0x000,0x000,0x000,0x000,0x000,0x000,
@@ -47,6 +50,24 @@ static void clearMenuArea(void)
     VDP_clearTextArea(7, 4, 26, 19);
 }
 
+static void drawSplash(void)
+{
+    VDP_clearTextArea(0, 0, 40, 28);
+    VDP_drawImageEx(BG_B, &splash,
+                    TILE_ATTR_FULL(PAL3, FALSE, FALSE, FALSE, TILE_USER_INDEX),
+                    0, 0, TRUE, TRUE);
+    drawLine("PRESS START", 14, 26, TRUE);
+    VDP_setTextPalette(PAL2);
+}
+
+static void showRoomBackground(void)
+{
+    VDP_clearTextArea(0, 0, 40, 28);
+    VDP_drawImageEx(BG_B, &room,
+                    TILE_ATTR_FULL(PAL3, FALSE, FALSE, FALSE, TILE_USER_INDEX),
+                    0, 0, TRUE, TRUE);
+}
+
 static void drawMainMenu(void)
 {
     clearMenuArea();
@@ -63,9 +84,17 @@ static void drawMainMenu(void)
     drawLine("|                        |", 7, 15, FALSE);
     drawLine("|                        |", 7, 16, FALSE);
     drawLine("+--------------------------+", 7, 17, FALSE);
-    drawLine("START", 16, 11, mainSelection == 0);
-    drawLine("SETTINGS", 15, 13, mainSelection == 1);
+    drawLine(mainSelection == 0 ? "> START" : "  START", 15, 11, mainSelection == 0);
+    drawLine(mainSelection == 1 ? "> SETTINGS" : "  SETTINGS", 14, 13, mainSelection == 1);
     VDP_setTextPalette(PAL2);
+}
+
+static void enterMainMenu(void)
+{
+    gameState = STATE_MAIN_MENU;
+    mainSelection = 0;
+    showRoomBackground();
+    drawMainMenu();
 }
 
 static void drawSettings(void)
@@ -89,10 +118,10 @@ static void drawSettings(void)
     drawLine("|                        |", 7, 16, FALSE);
     drawLine("+--------------------------+", 7, 17, FALSE);
 
-    sprintf(line, "RUN BUTTON: %s", buttonName);
-    drawLine(line, 12, 9, settingsSelection == 0);
-    drawLine("RESET DEFAULT", 13, 11, settingsSelection == 1);
-    drawLine("BACK", 17, 13, settingsSelection == 2);
+    sprintf(line, "%c RUN BUTTON: %s", settingsSelection == 0 ? '>' : ' ', buttonName);
+    drawLine(line, 11, 9, settingsSelection == 0);
+    drawLine(settingsSelection == 1 ? "> RESET DEFAULT" : "  RESET DEFAULT", 12, 11, settingsSelection == 1);
+    drawLine(settingsSelection == 2 ? "> BACK" : "  BACK", 16, 13, settingsSelection == 2);
     drawLine("A: SELECT  B: BACK", 11, 15, FALSE);
     drawLine("LEFT/RIGHT: CHANGE", 11, 16, FALSE);
     VDP_setTextPalette(PAL2);
@@ -105,6 +134,37 @@ static void cycleRunButton(void)
     else runButton = BUTTON_B;
 }
 
+/* Direction repeat: immediate on press, then repeat after a short delay. */
+static bool menuDirection(u16 pad, u16 *direction)
+{
+    u16 current = pad & (BUTTON_UP | BUTTON_DOWN);
+
+    if (current == 0)
+    {
+        navPrevious = 0;
+        navRepeat = 0;
+        return FALSE;
+    }
+
+    if (current != navPrevious)
+    {
+        navPrevious = current;
+        navRepeat = 0;
+        *direction = current;
+        return TRUE;
+    }
+
+    if (navRepeat < 12)
+    {
+        navRepeat++;
+        return FALSE;
+    }
+
+    navRepeat = 8;
+    *direction = current;
+    return TRUE;
+}
+
 static void drawPause(void)
 {
     VDP_clearTextArea(12, 11, 16, 6);
@@ -115,13 +175,16 @@ static void drawPause(void)
 
 int main(bool hardReset)
 {
-    u16 pad, pressed;
+    u16 pad, pressed, direction = 0;
     s16 speed;
     (void) hardReset;
 
-    VDP_setBackgroundColor(0);
-    VDP_drawImageEx(BG_B, &room, TILE_ATTR_FULL(PAL3, FALSE, FALSE, FALSE, TILE_USER_INDEX), 0, 0, TRUE, TRUE);
+    /* Initialize the controller before the first menu input is sampled. */
+    JOY_init();
+    SYS_doVBlankProcess();
+    oldPad = JOY_readJoypad(JOY_1);
 
+    VDP_setBackgroundColor(0);
     PAL_setPalette(PAL1, goldPalette, DMA);
     PAL_setPalette(PAL2, whitePalette, DMA);
     VDP_setTextPalette(PAL2);
@@ -135,7 +198,9 @@ int main(bool hardReset)
     }
     PAL_setPalette(PAL0, yuno.palette->data, DMA);
     SPR_setVisibility(yunoSprite, HIDDEN);
-    drawMainMenu();
+
+    gameState = STATE_SPLASH;
+    drawSplash();
 
     while (1)
     {
@@ -143,25 +208,34 @@ int main(bool hardReset)
         pressed = pad & (u16)~oldPad;
         oldPad = pad;
 
-        if (gameState == STATE_MAIN_MENU)
+        if (gameState == STATE_SPLASH)
         {
-            if (pressed & (BUTTON_UP | BUTTON_DOWN))
+            if (pressed & (BUTTON_START | BUTTON_A))
+                enterMainMenu();
+        }
+        else if (gameState == STATE_MAIN_MENU)
+        {
+            if (menuDirection(pad, &direction))
             {
-                mainSelection ^= 1;
+                if (direction & BUTTON_UP) mainSelection = 0;
+                else if (direction & BUTTON_DOWN) mainSelection = 1;
                 drawMainMenu();
             }
+
             if (pressed & (BUTTON_A | BUTTON_START))
             {
                 if (mainSelection == 0)
                 {
                     gameState = STATE_PLAYING;
-                    clearMenuArea();
+                    VDP_clearTextArea(0, 0, 40, 28);
                     SPR_setVisibility(yunoSprite, VISIBLE);
                 }
                 else
                 {
                     gameState = STATE_SETTINGS;
                     settingsSelection = 0;
+                    navPrevious = 0;
+                    navRepeat = 0;
                     drawSettings();
                 }
             }
@@ -171,39 +245,45 @@ int main(bool hardReset)
             if (pressed & BUTTON_B)
             {
                 gameState = STATE_MAIN_MENU;
+                navPrevious = 0;
+                navRepeat = 0;
                 drawMainMenu();
             }
-            else if (pressed & BUTTON_UP)
+            else
             {
-                if (settingsSelection > 0) settingsSelection--;
-                drawSettings();
-            }
-            else if (pressed & BUTTON_DOWN)
-            {
-                if (settingsSelection < 2) settingsSelection++;
-                drawSettings();
-            }
-            else if ((pressed & (BUTTON_LEFT | BUTTON_RIGHT)) && settingsSelection == 0)
-            {
-                cycleRunButton();
-                drawSettings();
-            }
-            else if (pressed & (BUTTON_A | BUTTON_START))
-            {
-                if (settingsSelection == 0)
+                if (menuDirection(pad, &direction))
+                {
+                    if ((direction & BUTTON_UP) && settingsSelection > 0)
+                        settingsSelection--;
+                    else if ((direction & BUTTON_DOWN) && settingsSelection < 2)
+                        settingsSelection++;
+                    drawSettings();
+                }
+
+                if ((pressed & (BUTTON_LEFT | BUTTON_RIGHT)) && settingsSelection == 0)
                 {
                     cycleRunButton();
                     drawSettings();
                 }
-                else if (settingsSelection == 1)
+                else if (pressed & (BUTTON_A | BUTTON_START))
                 {
-                    runButton = BUTTON_B;
-                    drawSettings();
-                }
-                else
-                {
-                    gameState = STATE_MAIN_MENU;
-                    drawMainMenu();
+                    if (settingsSelection == 0)
+                    {
+                        cycleRunButton();
+                        drawSettings();
+                    }
+                    else if (settingsSelection == 1)
+                    {
+                        runButton = BUTTON_B;
+                        drawSettings();
+                    }
+                    else
+                    {
+                        gameState = STATE_MAIN_MENU;
+                        navPrevious = 0;
+                        navRepeat = 0;
+                        drawMainMenu();
+                    }
                 }
             }
         }
@@ -245,14 +325,14 @@ int main(bool hardReset)
             }
             else if (pressed & BUTTON_B)
             {
-                gameState = STATE_MAIN_MENU;
                 SPR_setVisibility(yunoSprite, HIDDEN);
-                drawMainMenu();
+                enterMainMenu();
             }
         }
 
         SPR_update();
         SYS_doVBlankProcess();
     }
+
     return 0;
 }
