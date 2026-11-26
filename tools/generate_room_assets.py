@@ -49,27 +49,27 @@ def build_room():
     d.rectangle((0, 0, 319, 140), fill=C[13])
     d.rectangle((0, 0, 319, 11), fill=C[8])
     d.rectangle((0, 11, 319, 15), fill=C[10])
-    d.rectangle((0, 130, 319, 140), fill=C[8])
-    d.rectangle((0, 134, 319, 136), fill=C[11])
-    d.line((0, 139, 319, 139), fill=C[14], width=1)
+    d.rectangle((0, 120, 319, 132), fill=C[8])
+    d.rectangle((0, 124, 319, 126), fill=C[11])
+    d.line((0, 131, 319, 131), fill=C[14], width=1)
     for x in (4, 156, 316):
         d.rectangle((x, 17, x + 3, 132), fill=C[12])
         d.line((x + 1, 18, x + 1, 130), fill=C[14])
 
-    # Wider cool-slate floor: more depth for walking, not a stretched room.
-    d.rectangle((0, 141, 319, 223), fill=C[3])
-    for y in (141, 158, 175, 192, 209, 222):
-        d.line((0, y, 319, y), fill=C[2], width=2)
+    # Broad warm-oak floor spanning the full room width.
+    d.rectangle((0, 133, 319, 223), fill=C[10])
+    for y in (133, 150, 167, 184, 201, 222):
+        d.line((0, y, 319, y), fill=C[8], width=2)
         if y < 222:
-            d.line((0, y + 3, 319, y + 3), fill=C[4])
-    for row, y in enumerate((143, 160, 177, 194, 211)):
+            d.line((0, y + 3, 319, y + 3), fill=C[12])
+    for row, y in enumerate((135, 152, 169, 186, 203)):
         offset = 0 if row % 2 == 0 else 28
         for x in range(offset, 320, 56):
-            d.line((x, y, x, y + 13), fill=C[2])
-            d.line((x + 2, y + 2, x + 2, y + 11), fill=C[14])
-    # Subtle reflected bands make the slate floor feel broad and polished.
-    d.line((0, 216, 319, 216), fill=C[4])
-    d.line((0, 219, 319, 219), fill=C[2])
+            d.line((x, y, x, y + 13), fill=C[8])
+            d.line((x + 2, y + 2, x + 2, y + 11), fill=C[12])
+    # Warm reflected bands give the wood a polished finish.
+    d.line((0, 216, 319, 216), fill=C[12])
+    d.line((0, 219, 319, 219), fill=C[8])
 
     # Wide window: quiet evening street, small moon, trees and lanterns.
     d.rectangle((91, 22, 225, 108), fill=C[8])
@@ -219,26 +219,25 @@ def build_room():
     d.line((184, 116, 199, 116), fill=C[10], width=2)
     d.rectangle((188, 121, 195, 125), fill=C[11])
 
-    # One round oval rug in front of the bed (side-view perspective).
-    d.ellipse((204, 180, 314, 221), fill=C[8])
-    d.ellipse((207, 181, 311, 218), fill=C[2])
-    d.ellipse((211, 184, 307, 216), fill=C[5])
-    d.ellipse((215, 187, 303, 213), fill=C[6])
-    d.ellipse((220, 190, 298, 210), fill=C[4])
-    d.ellipse((229, 193, 289, 207), fill=C[5])
-    d.ellipse((233, 194, 285, 206), outline=C[11], width=2)
-    d.ellipse((240, 196, 278, 204), outline=C[7], width=1)
-    # A single central flower medallion and woven outer ring.
-    d.polygon([(259, 194), (265, 199), (259, 205), (253, 199)], fill=C[11])
-    d.polygon([(259, 196), (262, 199), (259, 202), (256, 199)], fill=C[7])
-    d.ellipse((257, 197, 261, 201), fill=C[14])
-    for x in (218, 228, 290, 300):
+    # One compact round rug beside the bed, shown in shallow perspective.
+    d.ellipse((225, 180, 301, 221), fill=C[8])
+    d.ellipse((228, 181, 298, 218), fill=C[2])
+    d.ellipse((232, 184, 294, 216), fill=C[5])
+    d.ellipse((236, 187, 290, 213), fill=C[6])
+    d.ellipse((241, 190, 285, 210), fill=C[4])
+    d.ellipse((246, 193, 280, 207), fill=C[5])
+    d.ellipse((250, 195, 276, 205), outline=C[11], width=2)
+    d.ellipse((254, 197, 272, 203), outline=C[7], width=1)
+    # Single flower medallion and woven circular border.
+    d.polygon([(263, 194), (269, 199), (263, 205), (257, 199)], fill=C[11])
+    d.polygon([(263, 196), (266, 199), (263, 202), (260, 199)], fill=C[7])
+    d.ellipse((261, 197, 265, 201), fill=C[14])
+    for x in (238, 248, 278, 288):
         d.point((x, 199), fill=C[14])
-    # Small tassels follow the oval outline.
-    for x in range(214, 306, 12):
+    for x in range(237, 291, 10):
         d.line((x, 217, x + 1, 220), fill=C[12])
-    d.line((206, 195, 202, 198), fill=C[12])
-    d.line((312, 195, 316, 198), fill=C[12])
+    d.line((227, 198, 223, 200), fill=C[12])
+    d.line((299, 198, 303, 200), fill=C[12])
 
     # Final furniture pass: stronger silhouettes and small hand-crafted details.
     # Carved bed headboard with brass finials, inset panels and a raised top rail.
@@ -281,8 +280,8 @@ def build_room():
     d.line((189, 129, 194, 129), fill=C[14])
 
     # Fine stitching on the one oval rug; no second carpet or rectangular runner.
-    d.ellipse((209, 183, 309, 217), outline=C[11], width=1)
-    d.ellipse((216, 187, 302, 213), outline=C[7], width=1)
+    d.ellipse((230, 183, 296, 217), outline=C[11], width=1)
+    d.ellipse((237, 187, 289, 213), outline=C[7], width=1)
 
     d.rectangle((118, 126, 137, 141), fill=C[8])
     d.rectangle((121, 129, 134, 138), fill=C[4])
