@@ -3,7 +3,7 @@
 
 #define PLAYER_MIN_X 4
 #define PLAYER_MAX_X 300
-#define PLAYER_MIN_Y 132
+#define PLAYER_MIN_Y 140
 #define PLAYER_MAX_Y 174
 #define SPRITE_VRAM_TILES 128
 
