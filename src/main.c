@@ -2,7 +2,7 @@
 #include "resources.h"
 
 #define PLAYER_MIN_X 4
-#define PLAYER_MAX_X 300
+#define PLAYER_MAX_X 288
 #define PLAYER_MIN_Y 140
 #define PLAYER_MAX_Y 188
 #define SPRITE_VRAM_TILES 128
@@ -48,11 +48,11 @@ typedef enum
 
 /* Tight floor-level footprints: only the actual furniture bases block movement. */
 static const RoomBlock roomBlocks[] = {
-    { 12, 147,  34,  13 }, /* door threshold */
-    { 58, 151,  43,  12 }, /* wardrobe feet */
-    {173, 159,  35,  10 }, /* bedside cabinet feet */
-    {210, 166, 103,  15 }, /* bed frame */
-    {283, 136,  33,  16 }  /* bookcase plinth */
+    { 12, 151,  34,   6 }, /* door threshold only */
+    { 58, 155,  43,   6 }, /* wardrobe plinth only */
+    {173, 162,  35,   6 }, /* bedside cabinet feet only */
+    {210, 171,  92,   9 }, /* bed frame, not mattress/headboard */
+    {283, 139,  33,   6 }  /* bookcase plinth only */
 };
 
 static Sprite *yunoSprite = NULL;
@@ -122,6 +122,26 @@ static const u16 roomLampPalette[16] = {
     RGB24_TO_VDPCOLOR(0xFFDBB6),
     RGB24_TO_VDPCOLOR(0xFFFFDB),
     RGB24_TO_VDPCOLOR(0xFFFFFF)
+};
+
+/* Night palette when the lamp is OFF: the room becomes visibly dimmer. */
+static const u16 roomNightPalette[16] = {
+    0x0000,
+    RGB24_TO_VDPCOLOR(0x242449),
+    RGB24_TO_VDPCOLOR(0x49246D),
+    RGB24_TO_VDPCOLOR(0x242449),
+    RGB24_TO_VDPCOLOR(0x492449),
+    RGB24_TO_VDPCOLOR(0x49246D),
+    RGB24_TO_VDPCOLOR(0x6D2449),
+    RGB24_TO_VDPCOLOR(0x6D496D),
+    RGB24_TO_VDPCOLOR(0x240000),
+    RGB24_TO_VDPCOLOR(0x492400),
+    RGB24_TO_VDPCOLOR(0x492424),
+    RGB24_TO_VDPCOLOR(0x6D4924),
+    RGB24_TO_VDPCOLOR(0x6D4949),
+    RGB24_TO_VDPCOLOR(0x926D6D),
+    RGB24_TO_VDPCOLOR(0xB69292),
+    RGB24_TO_VDPCOLOR(0xDBB6B6)
 };
 
 static const u16 roomDayPalette[16] = {
@@ -354,7 +374,7 @@ static void updateRoomLighting(void)
     else if (lampOn)
         PAL_setPalette(PAL3, roomLampPalette, CPU);
     else
-        PAL_setPalette(PAL3, room.palette->data, CPU);
+        PAL_setPalette(PAL3, roomNightPalette, CPU);
 
     if (lampGlowSprite != NULL)
         SPR_setVisibility(lampGlowSprite,
@@ -450,7 +470,7 @@ static RoomObject getNearbyObject(void)
 
     /* Interaction appears only at the front edge of the bedside cabinet. */
     distance = distanceSquared(centerX, centerY, 191, 160);
-    if ((distance <= (30L * 30L)) && (distance < bestDistance))
+    if ((distance <= (19L * 19L)) && (distance < bestDistance))
     {
         bestDistance = distance;
         nearest = ROOM_OBJECT_LAMP;
@@ -458,14 +478,14 @@ static RoomObject getNearbyObject(void)
 
     /* The bed prompt is deliberately short-range, from its front side only. */
     distance = distanceSquared(centerX, centerY, 260, 178);
-    if ((distance <= (36L * 36L)) && (distance < bestDistance))
+    if ((distance <= (21L * 21L)) && (distance < bestDistance))
     {
         bestDistance = distance;
         nearest = ROOM_OBJECT_BED;
     }
 
     distance = distanceSquared(centerX, centerY, 80, 159);
-    if ((distance <= (32L * 32L)) && (distance < bestDistance))
+    if ((distance <= (19L * 19L)) && (distance < bestDistance))
     {
         bestDistance = distance;
         nearest = ROOM_OBJECT_WARDROBE;
