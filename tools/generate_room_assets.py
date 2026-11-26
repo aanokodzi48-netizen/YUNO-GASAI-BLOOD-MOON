@@ -35,7 +35,7 @@ PALETTE = [
 # Drawing helpers keep the old semantic RGB values. The quantizer maps the
 # former very-dark-blue swatch to the nearest opaque dark-blue entry at index 1.
 C = [
-    (0, 0, 36), (36, 36, 73), (73, 36, 109), (73, 73, 109),
+    (36, 36, 73), (36, 36, 73), (73, 36, 109), (73, 73, 109),
     (109, 73, 109), (146, 73, 146), (182, 73, 146), (219, 109, 182),
     (73, 36, 36), (109, 73, 36), (146, 109, 73), (182, 146, 73),
     (182, 146, 109), (219, 182, 146), (219, 219, 182), (255, 255, 219)
