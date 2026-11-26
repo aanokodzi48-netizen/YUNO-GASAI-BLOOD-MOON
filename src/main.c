@@ -258,11 +258,30 @@ int main(bool hardReset)
     s16 speed;
     (void) hardReset;
 
+    /*
+     * MD.emu's Reset can re-enter main() without clearing every RAM
+     * variable. Rebuild the complete title/menu state explicitly:
+     * otherwise the splash is drawn while gameState may still be PLAYING,
+     * so START appears to do nothing.
+     */
+    gameState = STATE_SPLASH;
+    spritesInitialized = FALSE;
+    yunoSprite = NULL;
+    playerX = 144;
+    playerY = 150;
+    animClock = 0;
+    mainSelection = 0;
+    settingsSelection = 0;
+    navPrevious = 0;
+    navRepeat = 0;
+
     VDP_setBackgroundColor(0);
     VDP_setTextPlane(BG_A);
 
-    /* SGDK initializes the joypad during system startup. */
-    oldPad = 0;
+    /* Re-detect the pad after an emulator/system reset and sync edge state. */
+    JOY_reset();
+    JOY_update();
+    oldPad = JOY_readJoypad(JOY_1);
     drawSplash();
 
     while (1)
@@ -273,7 +292,9 @@ int main(bool hardReset)
 
         if (gameState == STATE_SPLASH)
         {
-            if (pressed & (BUTTON_START | BUTTON_A))
+            /* Level-trigger this first action so a held START after reset
+               cannot be missed by the edge detector. */
+            if (pad & (BUTTON_START | BUTTON_A))
                 enterMainMenuFromSplash();
         }
         else if (gameState == STATE_MAIN_MENU)
