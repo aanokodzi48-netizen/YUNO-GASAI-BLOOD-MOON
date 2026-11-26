@@ -315,8 +315,13 @@ static void updateSkySprite(void)
 {
     if (skyFxSprite != NULL)
     {
-        SPR_setAnimAndFrame(skyFxSprite, 0, isMorning ? 1 : 0);
-        SPR_setVisibility(skyFxSprite, VISIBLE);
+        if (isMorning)
+            SPR_setVisibility(skyFxSprite, HIDDEN);
+        else
+        {
+            SPR_setAnimAndFrame(skyFxSprite, 0, 0);
+            SPR_setVisibility(skyFxSprite, VISIBLE);
+        }
     }
 }
 
