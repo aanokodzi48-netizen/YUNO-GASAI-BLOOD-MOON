@@ -35,10 +35,10 @@ typedef enum
 /* Invisible floor-level collision footprints, aligned to the 320x224 room art. */
 static const RoomBlock roomBlocks[] = {
     {  0, 138,  28,  39 }, /* entry door / frame */
-    { 43, 126,  62,  35 }, /* wardrobe */
-    {178, 140,  45,  25 }, /* bedside cabinet */
-    {216, 144, 102,  28 }, /* bed */
-    {287, 126,  33,  35 }  /* bookcase */
+    { 43, 126,  62,  47 }, /* wardrobe base down to floor */
+    {178, 140,  45,  32 }, /* bedside cabinet base */
+    {216, 144, 102,  32 }, /* bed frame and base */
+    {287, 126,  33,  46 }  /* bookcase base */
 };
 
 static Sprite *yunoSprite = NULL;
