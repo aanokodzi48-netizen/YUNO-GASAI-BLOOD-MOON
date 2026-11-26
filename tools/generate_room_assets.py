@@ -11,10 +11,12 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "res"
 W, H = 320, 224
 
+# Indexed color 0 is transparent on Mega Drive. Keep the darkest opaque
+# room color at index 1 so night silhouettes never punch holes through the BG.
 # Every RGB component is one of the Mega Drive's 3-bit channel levels.
 PALETTE = [
-    (0, 0, 36),       # 0 deep night
-    (36, 36, 73),     # 1 blue night
+    (0, 0, 0),        # 0 transparent
+    (36, 36, 73),     # 1 deep blue night (also replaces the near-black old shade)
     (73, 36, 109),    # 2 violet shadow
     (73, 73, 109),    # 3 slate violet
     (109, 73, 109),   # 4 muted violet
@@ -30,7 +32,14 @@ PALETTE = [
     (219, 219, 182),  # 14 cream
     (255, 255, 219),  # 15 warm light
 ]
-C = PALETTE
+# Drawing helpers keep the old semantic RGB values. The quantizer maps the
+# former very-dark-blue swatch to the nearest opaque dark-blue entry at index 1.
+C = [
+    (0, 0, 36), (36, 36, 73), (73, 36, 109), (73, 73, 109),
+    (109, 73, 109), (146, 73, 146), (182, 73, 146), (219, 109, 182),
+    (73, 36, 36), (109, 73, 36), (146, 109, 73), (182, 146, 73),
+    (182, 146, 109), (219, 182, 146), (219, 219, 182), (255, 255, 219)
+]
 
 def build_room():
     im = Image.new("RGB", (W, H), C[13])
