@@ -16,6 +16,7 @@ typedef enum
 } GameState;
 
 static Sprite *yunoSprite;
+static bool spritesInitialized = FALSE;
 static s16 playerX = 144;
 static s16 playerY = 150;
 static u16 animClock = 0;
@@ -68,6 +69,22 @@ static void showRoomBackground(void)
                     0, 0, TRUE, TRUE);
 }
 
+static void initializeGameSprites(void)
+{
+    SPR_init();
+    yunoSprite = SPR_addSprite(&yuno, playerX, playerY,
+                               TILE_ATTR(PAL0, TRUE, FALSE, FALSE));
+    if (yunoSprite == NULL)
+    {
+        VDP_drawText("SPRITE ERROR", 14, 13);
+        while (1) SYS_doVBlankProcess();
+    }
+
+    PAL_setPalette(PAL0, yuno.palette->data, DMA);
+    SPR_setVisibility(yunoSprite, HIDDEN);
+    spritesInitialized = TRUE;
+}
+
 static void drawMainMenu(void)
 {
     clearMenuArea();
@@ -89,11 +106,14 @@ static void drawMainMenu(void)
     VDP_setTextPalette(PAL2);
 }
 
-static void enterMainMenu(void)
+static void enterMainMenuFromSplash(void)
 {
     gameState = STATE_MAIN_MENU;
     mainSelection = 0;
+
+    /* Load the room first, then allocate sprite tiles so the background stays intact. */
     showRoomBackground();
+    initializeGameSprites();
     drawMainMenu();
 }
 
@@ -179,7 +199,7 @@ int main(bool hardReset)
     s16 speed;
     (void) hardReset;
 
-    /* Initialize the controller before the first menu input is sampled. */
+    /* Explicitly initialize the joypad before the first menu input is sampled. */
     JOY_init();
     SYS_doVBlankProcess();
     oldPad = JOY_readJoypad(JOY_1);
@@ -189,17 +209,7 @@ int main(bool hardReset)
     PAL_setPalette(PAL2, whitePalette, DMA);
     VDP_setTextPalette(PAL2);
 
-    SPR_init();
-    yunoSprite = SPR_addSprite(&yuno, playerX, playerY, TILE_ATTR(PAL0, TRUE, FALSE, FALSE));
-    if (yunoSprite == NULL)
-    {
-        VDP_drawText("SPRITE ERROR", 14, 13);
-        while (1) SYS_doVBlankProcess();
-    }
-    PAL_setPalette(PAL0, yuno.palette->data, DMA);
-    SPR_setVisibility(yunoSprite, HIDDEN);
-
-    gameState = STATE_SPLASH;
+    /* The splash is drawn before SPR_init so its tiles cannot overwrite Yuno's sprite. */
     drawSplash();
 
     while (1)
@@ -211,7 +221,7 @@ int main(bool hardReset)
         if (gameState == STATE_SPLASH)
         {
             if (pressed & (BUTTON_START | BUTTON_A))
-                enterMainMenu();
+                enterMainMenuFromSplash();
         }
         else if (gameState == STATE_MAIN_MENU)
         {
@@ -326,11 +336,15 @@ int main(bool hardReset)
             else if (pressed & BUTTON_B)
             {
                 SPR_setVisibility(yunoSprite, HIDDEN);
-                enterMainMenu();
+                gameState = STATE_MAIN_MENU;
+                mainSelection = 0;
+                drawMainMenu();
             }
         }
 
-        SPR_update();
+        if (spritesInitialized)
+            SPR_update();
+
         SYS_doVBlankProcess();
     }
 
