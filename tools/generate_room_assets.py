@@ -5,7 +5,7 @@ This source generator is committed instead of opaque binary assets so each
 CI build recreates the exact same 320x224, 16-entry indexed images.
 """
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageEnhance
+from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "res"
@@ -242,6 +242,59 @@ def build_room():
     for x in range(76, 300, 8):
         d.line((x, 211, x+2, 214), fill=C[12])
         d.line((x, 174, x+2, 176), fill=C[12])
+
+    # Final furniture pass: stronger silhouettes and small hand-crafted details.
+    # Carved bed headboard with brass finials, inset panels and a raised top rail.
+    d.rectangle((291, 98, 319, 105), fill=C[8])
+    d.line((294, 99, 316, 99), fill=C[11], width=2)
+    d.rectangle((295, 106, 298, 164), fill=C[11])
+    d.rectangle((310, 106, 313, 164), fill=C[9])
+    d.rectangle((299, 112, 309, 158), fill=C[9])
+    d.rectangle((301, 115, 307, 155), fill=C[10])
+    d.line((302, 118, 306, 118), fill=C[14])
+    d.line((302, 152, 306, 152), fill=C[8])
+    d.ellipse((293, 96, 300, 103), fill=C[11])
+    d.point((296, 98), fill=C[15])
+    d.ellipse((309, 96, 316, 103), fill=C[11])
+    d.point((312, 98), fill=C[15])
+    # Mattress piping, tucked sheet and quilt folds.
+    d.line((212, 124, 291, 124), fill=C[15], width=2)
+    d.line((213, 127, 218, 157), fill=C[13])
+    d.line((249, 128, 249, 157), fill=C[4])
+    d.line((256, 141, 287, 146), fill=C[7])
+    d.line((258, 149, 286, 154), fill=C[4])
+    d.polygon([(266, 136), (270, 139), (266, 142), (262, 139)], fill=C[14])
+    d.polygon([(280, 145), (284, 148), (280, 151), (276, 148)], fill=C[14])
+    # Pillow seam and a tiny embroidered heart motif.
+    d.line((224, 133, 246, 133), fill=C[13])
+    d.line((224, 136, 246, 136), fill=C[14])
+    d.polygon([(235, 138), (232, 135), (229, 136), (229, 139),
+               (235, 144), (241, 139), (241, 136), (238, 135)], fill=C[7])
+
+    # Ceramic lamp: fluted shade, warm rim, glazed body and brass foot.
+    d.line((183, 103, 199, 103), fill=C[15], width=2)
+    d.line((181, 111, 202, 111), fill=C[11], width=2)
+    for x in (185, 190, 195, 199):
+        d.line((x, 105, x + 1, 115), fill=C[12])
+    d.rectangle((186, 121, 197, 125), fill=C[10])
+    d.line((187, 122, 196, 122), fill=C[14])
+    d.rectangle((184, 126, 199, 130), fill=C[8])
+    d.line((186, 127, 197, 127), fill=C[11])
+    d.ellipse((187, 128, 196, 132), fill=C[9])
+    d.line((189, 129, 194, 129), fill=C[14])
+
+    # More legible rug weave: repeated diamonds, inner stitching and corner tassels.
+    d.rectangle((72, 178, 300, 209), outline=C[11])
+    d.line((80, 181, 292, 181), fill=C[14])
+    d.line((80, 205, 292, 205), fill=C[2])
+    for x in range(96, 285, 24):
+        d.polygon([(x, 187), (x + 5, 192), (x, 197), (x - 5, 192)], fill=C[11])
+        d.polygon([(x, 189), (x + 3, 192), (x, 195), (x - 3, 192)], fill=C[7])
+        d.point((x, 192), fill=C[15])
+    for x in (73, 294):
+        for y in (184, 198):
+            d.line((x, y, x + (4 if x < 100 else -4), y + 4), fill=C[14], width=2)
+
     d.rectangle((118, 126, 137, 141), fill=C[8])
     d.rectangle((121, 129, 134, 138), fill=C[4])
     d.rectangle((127, 111, 131, 129), fill=C[15])
@@ -413,7 +466,10 @@ def make_ui_tiles():
     font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
     if not Path(font_path).exists():
         font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
-    font = ImageFont.truetype(font_path, 8)
+    try:
+        font = ImageFont.truetype(font_path, 8)
+    except OSError:
+        font = ImageFont.load_default()
 
     for i, char in enumerate(GLYPHS):
         tile = 10 + i
