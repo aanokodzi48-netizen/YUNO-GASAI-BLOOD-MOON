@@ -1,5 +1,4 @@
 #include <genesis.h>
-#include <stddef.h>
 #include "resources.h"
 #include "yuno_metasprite.h"
 
