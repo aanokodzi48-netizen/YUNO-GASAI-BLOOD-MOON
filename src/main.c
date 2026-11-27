@@ -9,7 +9,7 @@
 #define SPRITE_VRAM_TILES 128
 #define RU_GLYPH_COUNT 51
 #define PHONE_TILE_BASE TILE_USER_INDEX
-#define PHONE_TILE_COUNT 16
+#define PHONE_TILE_COUNT 20
 #define PHONE_WIDTH 20
 #define PHONE_HEIGHT 26
 
@@ -394,6 +394,31 @@ static void phoneFillRect(u16 x,u16 y,u16 w,u16 h,u8 color)
             phoneTile(xx,yy,color);
 }
 
+static void phonePatternTile(u16 tileIndex,u8 foreground,u8 background,const u8 rows[8])
+{
+    u32 packed[8];
+    u8 *dst=(u8*)packed;
+    u16 row,col;
+    for(row=0;row<8;row++)
+    {
+        for(col=0;col<8;col++)
+        {
+            u8 pixel=(rows[row]&(1u<<(7u-col)))?foreground:background;
+            u16 offset=(u16)(row*4u+(col>>1));
+            if((col&1u)==0)dst[offset]=(u8)(pixel<<4);
+            else dst[offset]|=pixel;
+        }
+    }
+    VDP_loadTileData(packed,tileIndex,1,CPU);
+}
+
+static void phonePatternMap(u16 x,u16 y,u8 pattern)
+{
+    VDP_setTileMapXY(BG_A,
+        TILE_ATTR_FULL(PAL1,TRUE,FALSE,FALSE,
+            (u16)(PHONE_TILE_BASE+16u+pattern)),x,y);
+}
+
 static bool drawPhoneBase(void)
 {
     u16 cols=screenColumns(),rows=screenRows();
@@ -418,6 +443,20 @@ static bool drawPhoneBase(void)
     /* Тень и бирюзовый корпус раскрытой раскладушки. */
     phoneFillRect((u16)(px-1),(u16)(py-1),22,28,2);
     phoneFillRect(px,py,PHONE_WIDTH,PHONE_HEIGHT,3);
+    {
+        static const u8 corners[4][8]={
+            {0x00,0x1F,0x3F,0x7F,0x7F,0xFF,0xFF,0xFF},
+            {0x00,0xF8,0xFC,0xFE,0xFE,0xFF,0xFF,0xFF},
+            {0xFF,0xFF,0xFF,0xFE,0xFE,0xFC,0xF8,0x00},
+            {0xFF,0xFF,0xFF,0x7F,0x7F,0x3F,0x1F,0x00}
+        };
+        u8 i;
+        for(i=0;i<4;i++)phonePatternTile((u16)(PHONE_TILE_BASE+16u+i),3,2,corners[i]);
+        phonePatternMap(px,py,0);
+        phonePatternMap((u16)(px+PHONE_WIDTH-1),py,1);
+        phonePatternMap(px,(u16)(py+PHONE_HEIGHT-1),2);
+        phonePatternMap((u16)(px+PHONE_WIDTH-1),(u16)(py+PHONE_HEIGHT-1),3);
+    }
     phoneFillRect((u16)(px+1),(u16)(py+1),18,24,4);
     phoneFillRect((u16)(px+2),(u16)(py+2),16,10,6);
     phoneFillRect((u16)(px+3),(u16)(py+3),14,8,7);
