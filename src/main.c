@@ -6,10 +6,6 @@
 #define PLAYER_MIN_Y 140
 #define PLAYER_MAX_Y 188
 #define SPRITE_VRAM_TILES 128
-#define WINDOW_TILE_X 13
-#define WINDOW_TILE_Y 4
-#define WINDOW_TILE_W 14
-#define WINDOW_TILE_H 8
 #define UI_TILE_FILL 1
 #define UI_TILE_TOP 2
 #define UI_TILE_BOTTOM 3
@@ -30,7 +26,7 @@
 #define INTRO_TILE_COUNT (INTRO_TILE_WIDTH * INTRO_TILE_HEIGHT)
 #define INTRO_TILE_X 7
 #define INTRO_TILE_Y 5
-#define INTRO_CHUNK_TILES 192
+#define INTRO_CHUNK_TILES 128
 #define INTRO_BUFFER_A TILE_USER_INDEX
 #define INTRO_BUFFER_B (TILE_USER_INDEX + INTRO_TILE_COUNT)
 
@@ -53,8 +49,6 @@ typedef enum
 } RoomObject;
 
 static Sprite *yunoSprite = NULL;
-static Sprite *lampGlowSprite = NULL;
-static Sprite *skyFxSprite = NULL;
 static bool spritesInitialized = FALSE;
 static const Image *introFrames[INTRO_FRAME_COUNT] = {
     &intro_00, &intro_01, &intro_02, &intro_03, &intro_04,
@@ -70,7 +64,6 @@ static bool introUploadActive = FALSE;
 static bool introUploadReady = FALSE;
 static bool introMapPending = FALSE;
 static bool introVisible = FALSE;
-static u16 windowTileBase = 0;
 static u16 uiTileBase = 0;
 static s16 playerX = 144;
 static s16 playerY = 154;
@@ -276,12 +269,14 @@ static void queueIntroUploadChunk(void)
     remaining = INTRO_TILE_COUNT - introUploadOffset;
     count = (remaining > INTRO_CHUNK_TILES) ? INTRO_CHUNK_TILES : remaining;
 
-    if (!VDP_loadTileSetEx(introFrames[introUploadFrame]->tileset,
-                           introUploadBase,
-                           introUploadOffset,
-                           count,
-                           DMA_QUEUE))
-        showFatalError("INTRO DMA QUEUE ERROR");
+    VDP_loadTileData(
+        FAR_SAFE(introFrames[introUploadFrame]->tileset->tiles +
+                 ((u32)introUploadOffset * 8),
+                 (u32)count * 32),
+        introUploadBase,
+        count,
+        DMA_QUEUE
+    );
 
     introUploadOffset += count;
 }
@@ -508,37 +503,22 @@ static bool drawRoomBackground(void)
     VDP_clearPlane(BG_A, TRUE);
     VDP_clearPlane(BG_B, TRUE);
 
-    nextTile = TILE_USER_INDEX + room.tileset->numTile;
-    if (nextTile > (TILE_USER_MAX_INDEX + 1))
-        return FALSE;
-    if (window_morning.tileset->numTile > (TILE_USER_MAX_INDEX + 1 - nextTile))
-        return FALSE;
-
     if (!VDP_drawImageEx(BG_B, &room,
                          TILE_ATTR_FULL(PAL3, FALSE, FALSE, FALSE, TILE_USER_INDEX),
                          0, 0, TRUE, TRUE))
         return FALSE;
 
-    windowTileBase = nextTile;
-    if (!VDP_loadTileSet(window_morning.tileset, windowTileBase, DMA))
+    nextTile = TILE_USER_INDEX + room.tileset->numTile;
+    if ((nextTile > (TILE_USER_MAX_INDEX + 1)) ||
+        (ui_tiles.numTile > (TILE_USER_MAX_INDEX + 1 - nextTile)))
         return FALSE;
 
-    nextTile = windowTileBase + window_morning.tileset->numTile;
-    if (ui_tiles.numTile > (TILE_USER_MAX_INDEX + 1 - nextTile))
-        return FALSE;
     uiTileBase = nextTile;
     if (!VDP_loadTileSet(&ui_tiles, uiTileBase, DMA))
         return FALSE;
 
-    PAL_setPalette(PAL0, window_morning.palette->data, CPU);
     PAL_setPalette(PAL1, uiPalette, CPU);
     PAL_setPalette(PAL3, room.palette->data, CPU);
-    return TRUE;
-}
-
-static bool drawMorningWindow(void)
-{
-    /* The current room has no window or other interactable background objects. */
     return TRUE;
 }
 
@@ -556,19 +536,6 @@ static void updateRoomLighting(void)
     else
         PAL_setPalette(PAL3, roomNightPalette, CPU);
 
-    if (lampGlowSprite != NULL)
-        SPR_setVisibility(lampGlowSprite,
-                          (lampOn && !daytime) ? VISIBLE : HIDDEN);
-}
-
-static void updateSkySprite(void)
-{
-    if (skyFxSprite != NULL)
-    {
-        SPR_setAnimAndFrame(skyFxSprite, 0,
-                            (clockHour >= 7 && clockHour < 18) ? 1 : 0);
-        SPR_setVisibility(skyFxSprite, VISIBLE);
-    }
 }
 
 static bool playerBlockedAt(s16 x, s16 y)
@@ -603,13 +570,6 @@ static void movePlayer(u16 pad)
 
     SPR_setAnimAndFrame(yunoSprite, 1, (animClock >> 3) & 3);
     SPR_setPosition(yunoSprite, playerX, playerY);
-}
-
-static s32 distanceSquared(s16 x1, s16 y1, s16 x2, s16 y2)
-{
-    s32 dx = x1 - x2;
-    s32 dy = y1 - y2;
-    return (dx * dx) + (dy * dy);
 }
 
 static RoomObject getNearbyObject(void)
@@ -756,9 +716,6 @@ static void updateGameClock(void)
     if (wasDaytime != isDaytime)
     {
         updateRoomLighting();
-        updateSkySprite();
-        if (!drawMorningWindow())
-            showFatalError("WINDOW UPDATE ERROR");
     }
 }
 
@@ -807,10 +764,6 @@ static void wakeFromSleep(void)
     minuteFrameCounter = 0;
     lampOn = FALSE;
     updateRoomLighting();
-    updateSkySprite();
-
-    if (!drawMorningWindow())
-        showFatalError("MORNING WINDOW ERROR");
     drawClockPanel();
 
     playerX = 184;
@@ -867,8 +820,6 @@ static bool startGame(void)
     messageTimer = 0;
     sleepTimer = 0;
     lastPrompt = 255;
-    lampGlowSprite = NULL;
-    skyFxSprite = NULL;
 
     if (!drawRoomBackground())
     {
@@ -877,19 +828,9 @@ static bool startGame(void)
         return FALSE;
     }
 
-    if (!drawMorningWindow())
-    {
-        SPR_end();
-        spritesInitialized = FALSE;
-        return FALSE;
-    }
-
     updateRoomLighting();
 
-    /* The first room iteration is intentionally empty: only Yuno is visible. */
-    lampGlowSprite = NULL;
-    skyFxSprite = NULL;
-    updateRoomLighting();
+    /* The room is empty: no furniture, window, lamp or moon sprites are spawned. */
 
     playerX = 144;
     playerY = 154;
@@ -901,8 +842,6 @@ static bool startGame(void)
     {
         SPR_end();
         spritesInitialized = FALSE;
-        lampGlowSprite = NULL;
-        skyFxSprite = NULL;
         return FALSE;
     }
 
@@ -931,9 +870,6 @@ static void returnToMainMenu(void)
     }
 
     yunoSprite = NULL;
-    lampGlowSprite = NULL;
-    skyFxSprite = NULL;
-    windowTileBase = 0;
     uiTileBase = 0;
     messageTimer = 0;
     sleepTimer = 0;
@@ -958,9 +894,6 @@ int main(bool hardReset)
     gameState = STATE_INTRO;
     spritesInitialized = FALSE;
     yunoSprite = NULL;
-    lampGlowSprite = NULL;
-    skyFxSprite = NULL;
-    windowTileBase = 0;
     uiTileBase = 0;
     playerX = 144;
     playerY = 154;

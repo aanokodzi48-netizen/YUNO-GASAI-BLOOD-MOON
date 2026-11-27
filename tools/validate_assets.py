@@ -8,18 +8,13 @@ from pathlib import Path
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 MD_LEVELS = {0, 36, 73, 109, 146, 182, 219, 255}
 STRICT_ASSETS = {
-    "title.png", "room_bg.png", "window_morning.png",
-    "lamp_glow.png", "sky_fx.png", "ui_tiles.png"
+    "title.png", "room_bg.png", "ui_tiles.png"
 }
 EXPECTED_SIZE = {
     "title.png": (320, 224),
     "room_bg.png": (320, 224),
-    "window_morning.png": (112, 64),
-    "lamp_glow.png": (32, 32),
-    "sky_fx.png": (32, 16),
     "ui_tiles.png": (128, 32),
 }
-FX_ASSETS = {"window_morning.png", "lamp_glow.png", "sky_fx.png"}
 INTRO_ASSETS = {f"intro_{index:02d}.png" for index in range(10)}
 STRICT_ASSETS.update(INTRO_ASSETS)
 for intro_name in INTRO_ASSETS:
@@ -117,15 +112,6 @@ if __name__ == "__main__":
         raise SystemExit("usage: validate_assets.py PNG [PNG ...]")
 
     palettes = {Path(item).name: validate(item) for item in sys.argv[1:]}
-    if not FX_ASSETS.issubset(palettes):
-        raise SystemExit("ERROR: missing one or more room FX assets")
-
-    fx = palettes["window_morning.png"]
-    for name in ("lamp_glow.png", "sky_fx.png"):
-        if palettes[name] != fx:
-            raise SystemExit(
-                f"ERROR: {name} must use the exact same palette as window_morning.png"
-            )
     missing_intro = INTRO_ASSETS.difference(palettes)
     if missing_intro:
         raise SystemExit("ERROR: missing intro frames: " + ", ".join(sorted(missing_intro)))

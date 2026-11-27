@@ -521,42 +521,26 @@ def make_ui_tiles():
     return im
 
 def make_empty_room():
-    """Empty, front-facing side-scroller room with a calm wall and broad oak walk plane."""
-    im = Image.new("RGB", (W, H), ROOM_PALETTE[4])
+    """Completely empty side-view room: bare wall above a wide walkable oak floor."""
+    im = Image.new("RGB", (W, H), ROOM_PALETTE[6])
     d = ImageDraw.Draw(im)
 
-    # Ceiling trim and a softly lit, uncluttered plum wall.
-    d.rectangle((0, 0, 319, 15), fill=ROOM_PALETTE[1])
-    d.rectangle((0, 2, 319, 4), fill=ROOM_PALETTE[6])
-    d.rectangle((0, 7, 319, 10), fill=ROOM_PALETTE[2])
-    d.line((0, 13, 319, 13), fill=ROOM_PALETTE[7])
-    d.rectangle((0, 16, 319, 132), fill=ROOM_PALETTE[4])
-
-    # Subtle plaster grain: sparse flecks, not repeated scanline bands.
-    for y in range(22, 130, 7):
-        for x in range(6 + ((y // 7) % 2) * 5, 316, 17):
-            if ((x // 17 + y // 7) % 3) == 0:
+    # Uninterrupted bare wall. Sparse single pixels keep it from looking flat
+    # without adding a window, door, furniture, frames, shelves or decor.
+    d.rectangle((0, 0, 319, 149), fill=ROOM_PALETTE[6])
+    for y in range(8, 145, 9):
+        for x in range(5 + ((y // 9) % 2) * 7, 316, 19):
+            if ((x // 19 + y // 9) % 4) == 0:
                 d.point((x, y), fill=ROOM_PALETTE[5])
-            if ((x // 17 + y // 7) % 7) == 0:
-                d.point((x + 1, y + 1), fill=ROOM_PALETTE[6])
+            elif ((x // 19 + y // 9) % 9) == 0:
+                d.point((x + 1, y + 1), fill=ROOM_PALETTE[7])
 
-    # Broad decorative wall panels. These are wall mouldings, not objects.
-    for left, right in ((10, 99), (115, 204), (220, 309)):
-        d.rectangle((left, 27, right, 119), outline=ROOM_PALETTE[2], width=2)
-        d.rectangle((left + 3, 30, right - 3, 116), outline=ROOM_PALETTE[5], width=1)
-        d.line((left + 7, 34, right - 7, 34), fill=ROOM_PALETTE[3])
-        d.line((left + 7, 112, right - 7, 112), fill=ROOM_PALETTE[3])
-        d.point((left + 5, 37), fill=ROOM_PALETTE[6])
-        d.point((right - 5, 109), fill=ROOM_PALETTE[3])
+    # A thin horizontal baseboard separates the wall from the floor.
+    d.rectangle((0, 145, 319, 149), fill=ROOM_PALETTE[2])
+    d.line((0, 145, 319, 145), fill=ROOM_PALETTE[7])
+    d.line((0, 148, 319, 148), fill=ROOM_PALETTE[1])
 
-    # Dark wainscot and polished baseboard separate wall and floor.
-    d.rectangle((0, 123, 319, 149), fill=ROOM_PALETTE[1])
-    d.rectangle((0, 126, 319, 128), fill=ROOM_PALETTE[7])
-    d.rectangle((0, 132, 319, 144), fill=ROOM_PALETTE[3])
-    d.rectangle((0, 146, 319, 148), fill=ROOM_PALETTE[2])
-    d.line((0, 149, 319, 149), fill=ROOM_PALETTE[8])
-
-    # Wide warm-oak floor in the lower third; depth bands widen toward camera.
+    # Broad unobstructed wooden walking plane in the lower third.
     d.rectangle((0, 150, 319, 223), fill=ROOM_PALETTE[11])
     rows = (150, 164, 179, 195, 211, 223)
     for y in rows:
@@ -564,6 +548,7 @@ def make_empty_room():
         if y < 223:
             d.line((0, y + 2, 319, y + 2), fill=ROOM_PALETTE[13])
 
+    # Staggered plank seams imply shallow 2.5D depth, with no floor props.
     for row, (top, bottom) in enumerate(zip(rows[:-1], rows[1:])):
         board_width = 48 + (row * 4)
         offset = (row % 2) * 23
@@ -571,17 +556,13 @@ def make_empty_room():
             d.line((x, top + 3, x, bottom - 1), fill=ROOM_PALETTE[9])
             d.line((x + 1, top + 4, x + 1, bottom - 2), fill=ROOM_PALETTE[13])
 
-    # Restrained wood grain and warm reflections.
+    # Very sparse natural wood grain.
     for row, (top, bottom) in enumerate(zip(rows[:-1], rows[1:])):
-        for x in range(5 + (row % 2) * 9, 320, 19):
+        for x in range(7 + (row % 2) * 9, 320, 24):
             yy = top + 4 + ((x * 3 + row * 5) % max(1, bottom - top - 6))
-            grain = ROOM_PALETTE[12] if ((x // 19) % 3) else ROOM_PALETTE[10]
-            d.line((x, yy, min(319, x + 5 + row), yy), fill=grain)
-            if ((x // 19) % 4) == 0:
-                d.point((x + 2, yy + 1), fill=ROOM_PALETTE[14])
+            shade = ROOM_PALETTE[12] if ((x // 24) % 2) else ROOM_PALETTE[10]
+            d.line((x, yy, min(319, x + 4), yy), fill=shade)
 
-    d.line((0, 216, 319, 216), fill=ROOM_PALETTE[12])
-    d.line((0, 220, 319, 220), fill=ROOM_PALETTE[8])
     d.rectangle((0, 221, 319, 223), fill=ROOM_PALETTE[9])
     return im
 
@@ -590,11 +571,8 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     # Empty room is now the only background; the old furnished room is not generated.
     indexed_png(make_empty_room(), OUT / "room_bg.png", ROOM_PALETTE)
-    indexed_png(make_morning_window(), OUT / "window_morning.png", FX_PALETTE)
-    indexed_png(make_lamp_glow(), OUT / "lamp_glow.png", FX_PALETTE)
-    indexed_png(make_sky_fx(), OUT / "sky_fx.png", FX_PALETTE)
     indexed_png(make_ui_tiles(), OUT / "ui_tiles.png", UI_PALETTE)
-    print("Generated room, morning window, lamp glow, moon/sun sprites, and Russian UI tile/font atlas.")
+    print("Generated the empty room background and Russian UI tile/font atlas.")
 
 if __name__ == "__main__":
     main()
