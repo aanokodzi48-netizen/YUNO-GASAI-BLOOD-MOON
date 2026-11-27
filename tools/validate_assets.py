@@ -7,13 +7,9 @@ from pathlib import Path
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 MD_LEVELS = {0, 36, 73, 109, 146, 182, 219, 255}
-STRICT_ASSETS = {
-    "title.png", "room_bg.png", "ui_tiles.png"
-}
+STRICT_ASSETS = {"title.png"}
 EXPECTED_SIZE = {
     "title.png": (320, 224),
-    "room_bg.png": (320, 224),
-    "ui_tiles.png": (128, 32),
 }
 INTRO_ASSETS = {f"intro_{index:02d}.png" for index in range(10)}
 STRICT_ASSETS.update(INTRO_ASSETS)

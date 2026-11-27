@@ -1,6 +1,4 @@
 SPRITE yuno "yuno.png" 4 4 FAST 5
-IMAGE room "room_bg.png" BEST
-TILESET ui_tiles "ui_tiles.png" NONE NONE ROW
 IMAGE title "title.png" BEST
 IMAGE intro_00 "intro_00.png" NONE
 IMAGE intro_01 "intro_01.png" NONE
