@@ -53,7 +53,8 @@ static u16 decodeRussianCodepoint(const u8 **cursor){
 static s16 russianGlyph(u16 cp){
  if((cp>=0x0410u)&&(cp<=0x042Fu))return (s16)(cp-0x0410u);
  if(cp==0x0401u)return 32;
- if(cp=='>')return 33;if(cp==':')return 34;if(cp=='-')return 35;if(cp=='.')return 36;\n if(cp=='A')return 0;if(cp=='B')return 2;if(cp=='C')return 17;
+ if(cp=='>')return 33;if(cp==':')return 34;if(cp=='-')return 35;if(cp=='.')return 36;
+ if(cp=='A')return 0;if(cp=='B')return 2;if(cp=='C')return 17;
  return -1;
 }
 static u16 russianTextLength(const char*text){
