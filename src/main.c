@@ -21,10 +21,12 @@
 #define UI_TILE_BOTTOM_RIGHT 9
 #define UI_GLYPH_BASE 10
 #define FRAMES_PER_GAME_MINUTE 120
+#define INTRO_FRAME_COUNT 10
+#define INTRO_TICK_FRAMES 10
 
 typedef enum
 {
-    STATE_SEGA_LOGO,
+    STATE_INTRO,
     STATE_SPLASH,
     STATE_MAIN_MENU,
     STATE_SETTINGS,
@@ -43,9 +45,13 @@ typedef enum
 static Sprite *yunoSprite = NULL;
 static Sprite *lampGlowSprite = NULL;
 static Sprite *skyFxSprite = NULL;
-static Sprite *segaGlintSprite = NULL;
-static u16 segaIntroFrame = 0;
 static bool spritesInitialized = FALSE;
+static const Image *introFrames[INTRO_FRAME_COUNT] = {
+    &intro_00, &intro_01, &intro_02, &intro_03, &intro_04,
+    &intro_05, &intro_06, &intro_07, &intro_08, &intro_09
+};
+static u8 introFrame = 0;
+static u8 introTick = 0;
 static u16 windowTileBase = 0;
 static u16 uiTileBase = 0;
 static s16 playerX = 144;
@@ -57,7 +63,7 @@ static u8 mainSelection = 0;
 static u8 settingsSelection = 0;
 static u16 navPrevious = 0;
 static u8 navRepeat = 0;
-static GameState gameState = STATE_SEGA_LOGO;
+static GameState gameState = STATE_INTRO;
 
 static bool lampOn = FALSE;
 static bool isMorning = FALSE;
@@ -172,6 +178,7 @@ static bool drawTitleBackground(void)
                          0, 0, TRUE, TRUE))
         return FALSE;
 
+    PAL_setPalette(PAL0, title.palette->data, DMA);
     PAL_setPalette(PAL1, goldPalette, DMA);
     PAL_setPalette(PAL2, whitePalette, DMA);
     VDP_setTextPalette(PAL2);
@@ -198,44 +205,31 @@ static void drawSplash(void)
     VDP_setTextPalette(PAL2);
 }
 
-static bool drawSegaLogoIntro(void)
+/* ---------- Uploaded frame animation: 10 frames at 10 VBlanks each ---------- */
+
+static bool showIntroFrame(void)
+{
+    /* Every frame is full-screen and shares one common 16-color palette.
+       Reusing the same tile base keeps VRAM use constant. */
+    return VDP_drawImageEx(BG_B, introFrames[introFrame],
+                           TILE_ATTR_FULL(PAL0, FALSE, FALSE, FALSE, TILE_USER_INDEX),
+                           0, 0, TRUE, TRUE);
+}
+
+static bool startIntro(void)
 {
     VDP_clearPlane(BG_A, TRUE);
     VDP_clearPlane(BG_B, TRUE);
+    VDP_setTextPlane(BG_A);
 
-    if (!VDP_drawImageEx(BG_B, &sega_intro,
-                         TILE_ATTR_FULL(PAL0, FALSE, FALSE, FALSE, TILE_USER_INDEX),
-                         0, 0, TRUE, TRUE))
-        return FALSE;
-
-    PAL_setPalette(PAL0, sega_intro.palette->data, DMA);
-    PAL_setPalette(PAL1, sega_glint.palette->data, DMA);
-
-    SPR_initEx(SPRITE_VRAM_TILES);
-    spritesInitialized = TRUE;
-    segaGlintSprite = SPR_addSprite(&sega_glint, 48, 94,
-                                    TILE_ATTR(PAL1, TRUE, FALSE, FALSE));
-    if (segaGlintSprite == NULL)
-    {
-        SPR_end();
-        spritesInitialized = FALSE;
-        return FALSE;
-    }
-
-    segaIntroFrame = 0;
-    SPR_setVisibility(segaGlintSprite, VISIBLE);
-    return TRUE;
+    introFrame = 0;
+    introTick = 0;
+    PAL_setPalette(PAL0, intro_00.palette->data, DMA);
+    return showIntroFrame();
 }
 
-static void leaveSegaLogoIntro(void)
+static void leaveIntro(void)
 {
-    if (spritesInitialized)
-    {
-        SPR_end();
-        spritesInitialized = FALSE;
-    }
-
-    segaGlintSprite = NULL;
     gameState = STATE_SPLASH;
     drawSplash();
 }
@@ -776,8 +770,6 @@ static void returnToMainMenu(void)
     yunoSprite = NULL;
     lampGlowSprite = NULL;
     skyFxSprite = NULL;
-    segaGlintSprite = NULL;
-    segaIntroFrame = 0;
     windowTileBase = 0;
     uiTileBase = 0;
     messageTimer = 0;
@@ -800,13 +792,11 @@ int main(bool hardReset)
     (void) hardReset;
 
     /* Rebuild all state explicitly after a Mega Drive / MD.emu reset. */
-    gameState = STATE_SEGA_LOGO;
+    gameState = STATE_INTRO;
     spritesInitialized = FALSE;
     yunoSprite = NULL;
     lampGlowSprite = NULL;
     skyFxSprite = NULL;
-    segaGlintSprite = NULL;
-    segaIntroFrame = 0;
     windowTileBase = 0;
     uiTileBase = 0;
     playerX = 144;
@@ -831,8 +821,8 @@ int main(bool hardReset)
     JOY_reset();
     JOY_update();
     oldPad = JOY_readJoypad(JOY_1);
-    if (!drawSegaLogoIntro())
-        showFatalError("SEGA LOGO ERROR");
+    if (!startIntro())
+        showFatalError("INTRO IMAGE ERROR");
 
     while (1)
     {
@@ -840,27 +830,25 @@ int main(bool hardReset)
         pressed = pad & (u16)~oldPad;
         oldPad = pad;
 
-        if (gameState == STATE_SEGA_LOGO)
+        if (gameState == STATE_INTRO)
         {
             if (pressed & (BUTTON_START | BUTTON_A))
             {
-                leaveSegaLogoIntro();
+                leaveIntro();
             }
             else
             {
-                if (segaIntroFrame < 120)
-                    segaIntroFrame++;
-
-                if (segaGlintSprite != NULL)
+                introTick++;
+                if (introTick >= INTRO_TICK_FRAMES)
                 {
-                    u16 glintX = (segaIntroFrame < 100)
-                        ? (u16)(48 + (segaIntroFrame * 2))
-                        : 248;
-                    SPR_setPosition(segaGlintSprite, glintX, 94);
-                }
+                    introTick = 0;
+                    introFrame++;
 
-                if (segaIntroFrame >= 120)
-                    leaveSegaLogoIntro();
+                    if (introFrame >= INTRO_FRAME_COUNT)
+                        leaveIntro();
+                    else if (!showIntroFrame())
+                        showFatalError("INTRO FRAME ERROR");
+                }
             }
         }
         else if (gameState == STATE_SPLASH)

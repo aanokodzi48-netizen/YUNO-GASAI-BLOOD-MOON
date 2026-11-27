@@ -28,3 +28,13 @@ GitHub Actions builds SGDK with the Marsdev toolchain. A successful run publishe
 Expected ROM output: `out/rom.bin`.
 
 A successful build still needs an emulator play-test before it can be called tested.
+
+
+## Animated opening
+
+The ten uploaded GIFs in `res/frame_*.gif` are converted during CI by
+`tools/make_intro_frames.py` into ten 320x224, 4-bit indexed PNG images.
+All ten images share one 16-color palette snapped to Mega Drive's 9-bit RGB
+levels. The game displays each image for 10 VBlanks (~0.17 s at 60 Hz), then
+continues to the existing Yuno splash screen and main menu. START or A skips
+the sequence. No SEGA logo screen is used.

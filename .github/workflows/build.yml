@@ -43,8 +43,11 @@ jobs:
       - name: Generate Mega Drive room and UI assets
         run: python3 tools/generate_room_assets.py
 
+      - name: Convert uploaded intro GIF frames
+        run: python3 tools/make_intro_frames.py
+
       - name: Validate indexed assets
-        run: python3 tools/validate_assets.py res/yuno.png res/room_bg.png res/window_morning.png res/lamp_glow.png res/sky_fx.png res/ui_tiles.png res/title.png res/sega_intro.png res/sega_glint.png
+        run: python3 tools/validate_assets.py res/yuno.png res/room_bg.png res/window_morning.png res/lamp_glow.png res/sky_fx.png res/ui_tiles.png res/title.png res/intro_00.png res/intro_01.png res/intro_02.png res/intro_03.png res/intro_04.png res/intro_05.png res/intro_06.png res/intro_07.png res/intro_08.png res/intro_09.png
 
       - name: Compile game ROM
         shell: bash

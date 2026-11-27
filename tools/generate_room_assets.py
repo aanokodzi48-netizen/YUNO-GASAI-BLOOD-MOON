@@ -5,7 +5,7 @@ This source generator is committed instead of opaque binary assets so each
 CI build recreates the exact same 320x224, 16-entry indexed images.
 """
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageEnhance, ImageFont, ImageChops
+from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "res"
@@ -28,16 +28,6 @@ ROOM_PALETTE = [
     (219, 146, 73),     # 13 floor highlight
     (255, 182, 109),    # 14 floor glint
     (255, 219, 182),    # 15 trim highlight
-]
-
-SEGA_PALETTE = [
-    (0, 0, 0),
-    (0, 0, 73), (0, 0, 146), (0, 0, 219),
-    (36, 73, 219), (73, 109, 255), (146, 182, 255),
-    (219, 219, 255), (255, 255, 255),
-    (36, 36, 109), (73, 73, 146), (109, 109, 182),
-    (146, 146, 219), (182, 182, 255), (219, 219, 255),
-    (255, 255, 255),
 ]
 
 
@@ -615,63 +605,10 @@ def make_empty_room():
     return im
 
 
-def make_sega_intro():
-    """Native 320x224 blue-and-white SEGA-style logo screen, hard pixel edges."""
-    im = Image.new("RGB", (320, 224), (0, 0, 0))
-    font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf"
-    if not Path(font_path).exists():
-        font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-    font = ImageFont.truetype(font_path, 72)
-    d = ImageDraw.Draw(im)
-    bounds = d.textbbox((0, 0), "SEGA", font=font)
-    x = (320 - (bounds[2] - bounds[0])) // 2 - bounds[0]
-    y = 76 - bounds[1]
-
-    def text_mask(pos, stroke):
-        mask = Image.new("L", (320, 224), 0)
-        md = ImageDraw.Draw(mask)
-        md.text(pos, "SEGA", font=font, fill=255,
-                stroke_width=stroke, stroke_fill=255)
-        return mask.point(lambda value: 255 if value >= 128 else 0)
-
-    shadow = text_mask((x + 3, y + 3), 7)
-    im.paste((0, 0, 146), (0, 0), shadow)
-    outline = text_mask((x, y), 4)
-    im.paste((36, 73, 219), (0, 0), outline)
-    fill = text_mask((x, y), 0)
-    im.paste((255, 255, 255), (0, 0), fill)
-
-    # Horizontal negative stripes echo the classic console-era wordmark.
-    stripe = Image.new("L", (320, 224), 0)
-    sd = ImageDraw.Draw(stripe)
-    for yy in (101, 109, 117, 125, 133):
-        sd.rectangle((59, yy, 260, yy + 1), fill=255)
-    stripe = ImageChops.multiply(stripe, fill)
-    im.paste((0, 0, 109), (0, 0), stripe)
-
-    d = ImageDraw.Draw(im)
-    d.line((96, 160, 224, 160), fill=(0, 0, 219), width=2)
-    d.line((116, 166, 204, 166), fill=(73, 109, 255), width=1)
-    return im
-
-
-def make_sega_glint():
-    """16x32 diagonal sparkle sprite animated across the SEGA wordmark."""
-    im = Image.new("RGB", (16, 32), (0, 0, 0))
-    d = ImageDraw.Draw(im)
-    d.polygon([(9, 0), (15, 0), (7, 31), (1, 31)], fill=(36, 73, 219))
-    d.polygon([(10, 0), (13, 0), (6, 31), (3, 31)], fill=(73, 109, 255))
-    d.polygon([(11, 0), (12, 0), (5, 31), (4, 31)], fill=(255, 255, 255))
-    d.line((12, 3, 7, 26), fill=(219, 219, 255), width=1)
-    return im
-
-
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     # Empty room is now the only background; the old furnished room is not generated.
     indexed_png(make_empty_room(), OUT / "room_bg.png", ROOM_PALETTE)
-    indexed_png(make_sega_intro(), OUT / "sega_intro.png", SEGA_PALETTE)
-    indexed_png(make_sega_glint(), OUT / "sega_glint.png", SEGA_PALETTE)
     indexed_png(make_morning_window(), OUT / "window_morning.png", FX_PALETTE)
     indexed_png(make_lamp_glow(), OUT / "lamp_glow.png", FX_PALETTE)
     indexed_png(make_sky_fx(), OUT / "sky_fx.png", FX_PALETTE)

@@ -9,7 +9,7 @@ PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 MD_LEVELS = {0, 36, 73, 109, 146, 182, 219, 255}
 STRICT_ASSETS = {
     "title.png", "room_bg.png", "window_morning.png",
-    "lamp_glow.png", "sky_fx.png", "ui_tiles.png", "sega_intro.png", "sega_glint.png"
+    "lamp_glow.png", "sky_fx.png", "ui_tiles.png"
 }
 EXPECTED_SIZE = {
     "title.png": (320, 224),
@@ -18,10 +18,12 @@ EXPECTED_SIZE = {
     "lamp_glow.png": (32, 32),
     "sky_fx.png": (32, 16),
     "ui_tiles.png": (128, 32),
-    "sega_intro.png": (320, 224),
-    "sega_glint.png": (16, 32),
 }
 FX_ASSETS = {"window_morning.png", "lamp_glow.png", "sky_fx.png"}
+INTRO_ASSETS = {f"intro_{index:02d}.png" for index in range(10)}
+STRICT_ASSETS.update(INTRO_ASSETS)
+for intro_name in INTRO_ASSETS:
+    EXPECTED_SIZE[intro_name] = (320, 224)
 
 def validate(path):
     path = Path(path)
@@ -124,3 +126,14 @@ if __name__ == "__main__":
             raise SystemExit(
                 f"ERROR: {name} must use the exact same palette as window_morning.png"
             )
+    missing_intro = INTRO_ASSETS.difference(palettes)
+    if missing_intro:
+        raise SystemExit("ERROR: missing intro frames: " + ", ".join(sorted(missing_intro)))
+
+    shared_intro_palette = palettes["intro_00.png"]
+    for name in sorted(INTRO_ASSETS):
+        if palettes[name] != shared_intro_palette:
+            raise SystemExit(
+                f"ERROR: {name} does not use the same palette as intro_00.png"
+            )
+    print("OK all ten intro PNGs share the same 16-color Mega Drive palette.")
