@@ -238,7 +238,10 @@ static void showFatalError(void)
     VDP_setEnable(TRUE);
     VDP_clearPlane(BG_A,TRUE);
     VDP_clearPlane(BG_B,TRUE);
-    VDP_drawText("TITLE IMAGE ERROR",7,13);
+    PAL_setPalette(PAL1,goldPalette,CPU);
+    PAL_setPalette(PAL2,whitePalette,CPU);
+    buildRussianFont();
+    drawCenteredRussian("ОШИБКА ЗАСТАВКИ",13,TRUE);
     while(1)SYS_doVBlankProcess();
 }
 
