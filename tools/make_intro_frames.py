@@ -5,7 +5,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "res"
-WIDTH, HEIGHT = 320, 224
+WIDTH, HEIGHT = 208, 144
 FRAME_COUNT = 10
 MD_LEVELS = (0, 36, 73, 109, 146, 182, 219, 255)
 
@@ -15,7 +15,7 @@ def snap(channel):
 
 
 def cover_crop(source):
-    """Scale with nearest-neighbour and crop to the 320x224 console screen."""
+    """Scale with nearest-neighbour and crop to the centered 208x144 intro window."""
     source = source.convert("RGB")
     src_w, src_h = source.size
     if not src_w or not src_h:

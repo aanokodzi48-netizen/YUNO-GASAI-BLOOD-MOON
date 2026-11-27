@@ -521,60 +521,42 @@ def make_ui_tiles():
     return im
 
 def make_empty_room():
-    """Empty, front-facing side-scroller room: patterned wall and wide walkable oak floor."""
+    """Empty, front-facing side-scroller room with a calm wall and broad oak walk plane."""
     im = Image.new("RGB", (W, H), ROOM_PALETTE[4])
     d = ImageDraw.Draw(im)
 
-    # Heavy crown molding at the top of the back wall.
+    # Ceiling trim and a softly lit, uncluttered plum wall.
     d.rectangle((0, 0, 319, 15), fill=ROOM_PALETTE[1])
     d.rectangle((0, 2, 319, 4), fill=ROOM_PALETTE[6])
-    d.rectangle((0, 6, 319, 10), fill=ROOM_PALETTE[2])
-    d.line((0, 13, 319, 13), fill=ROOM_PALETTE[7], width=1)
-
-    # Bare front wall. Repeating wallpaper stripes and flowers are texture,
-    # not furniture; there are no doors, windows, shelves or other objects.
+    d.rectangle((0, 7, 319, 10), fill=ROOM_PALETTE[2])
+    d.line((0, 13, 319, 13), fill=ROOM_PALETTE[7])
     d.rectangle((0, 16, 319, 132), fill=ROOM_PALETTE[4])
-    for x in range(0, 320, 20):
-        shade = ROOM_PALETTE[5] if ((x // 20) % 2 == 0) else ROOM_PALETTE[4]
-        d.rectangle((x, 16, x + 9, 132), fill=shade)
-        d.line((x, 16, x, 132), fill=ROOM_PALETTE[2])
-        d.line((x + 8, 16, x + 8, 132),
-               fill=ROOM_PALETTE[6] if ((x // 20) % 2 == 0) else ROOM_PALETTE[5])
 
-    # Fine, evenly spaced wallpaper dithering.
-    for y in range(18, 132, 2):
-        for x in range(1, 320, 2):
-            if (((x // 3) + (y // 3)) % 5) == 0:
-                d.point((x, y), fill=ROOM_PALETTE[6])
+    # Subtle plaster grain: sparse flecks, not repeated scanline bands.
+    for y in range(22, 130, 7):
+        for x in range(6 + ((y // 7) % 2) * 5, 316, 17):
+            if ((x // 17 + y // 7) % 3) == 0:
+                d.point((x, y), fill=ROOM_PALETTE[5])
+            if ((x // 17 + y // 7) % 7) == 0:
+                d.point((x + 1, y + 1), fill=ROOM_PALETTE[6])
 
-    def flower(cx, cy):
-        # Small four-petal motif, repeated as part of the wallpaper pattern.
-        d.rectangle((cx - 1, cy - 5, cx + 1, cy + 5), fill=ROOM_PALETTE[3])
-        d.rectangle((cx - 5, cy - 1, cx + 5, cy + 1), fill=ROOM_PALETTE[3])
-        d.rectangle((cx - 3, cy - 3, cx - 1, cy - 1), fill=ROOM_PALETTE[7])
-        d.rectangle((cx + 2, cy - 3, cx + 3, cy - 1), fill=ROOM_PALETTE[7])
-        d.rectangle((cx - 3, cy + 2, cx - 1, cy + 3), fill=ROOM_PALETTE[7])
-        d.rectangle((cx + 2, cy + 2, cx + 3, cy + 3), fill=ROOM_PALETTE[7])
-        d.point((cx, cy), fill=ROOM_PALETTE[8])
-        for px, py in ((cx, cy - 7), (cx, cy + 7), (cx - 7, cy), (cx + 7, cy)):
-            d.point((px, py), fill=ROOM_PALETTE[6])
-        for px, py in ((cx - 5, cy - 5), (cx + 5, cy - 5),
-                       (cx - 5, cy + 5), (cx + 5, cy + 5)):
-            d.point((px, py), fill=ROOM_PALETTE[5])
+    # Broad decorative wall panels. These are wall mouldings, not objects.
+    for left, right in ((10, 99), (115, 204), (220, 309)):
+        d.rectangle((left, 27, right, 119), outline=ROOM_PALETTE[2], width=2)
+        d.rectangle((left + 3, 30, right - 3, 116), outline=ROOM_PALETTE[5], width=1)
+        d.line((left + 7, 34, right - 7, 34), fill=ROOM_PALETTE[3])
+        d.line((left + 7, 112, right - 7, 112), fill=ROOM_PALETTE[3])
+        d.point((left + 5, 37), fill=ROOM_PALETTE[6])
+        d.point((right - 5, 109), fill=ROOM_PALETTE[3])
 
-    for y in (34, 72, 110):
-        for x in range(18, 320, 40):
-            flower(x, y)
-
-    # Broad layered baseboard: the wall/floor boundary is horizontal.
-    d.rectangle((0, 133, 319, 149), fill=ROOM_PALETTE[1])
-    d.rectangle((0, 135, 319, 137), fill=ROOM_PALETTE[7])
-    d.rectangle((0, 139, 319, 145), fill=ROOM_PALETTE[3])
+    # Dark wainscot and polished baseboard separate wall and floor.
+    d.rectangle((0, 123, 319, 149), fill=ROOM_PALETTE[1])
+    d.rectangle((0, 126, 319, 128), fill=ROOM_PALETTE[7])
+    d.rectangle((0, 132, 319, 144), fill=ROOM_PALETTE[3])
     d.rectangle((0, 146, 319, 148), fill=ROOM_PALETTE[2])
     d.line((0, 149, 319, 149), fill=ROOM_PALETTE[8])
 
-    # Wide wooden floor in the lower third. Board seams get farther apart
-    # toward the front to imply a shallow 2.5D belt-scroller walk plane.
+    # Wide warm-oak floor in the lower third; depth bands widen toward camera.
     d.rectangle((0, 150, 319, 223), fill=ROOM_PALETTE[11])
     rows = (150, 164, 179, 195, 211, 223)
     for y in rows:
@@ -589,18 +571,17 @@ def make_empty_room():
             d.line((x, top + 3, x, bottom - 1), fill=ROOM_PALETTE[9])
             d.line((x + 1, top + 4, x + 1, bottom - 2), fill=ROOM_PALETTE[13])
 
-    # Sparse grain marks and light reflections; no rugs or other floor objects.
+    # Restrained wood grain and warm reflections.
     for row, (top, bottom) in enumerate(zip(rows[:-1], rows[1:])):
-        for x in range(5 + (row % 2) * 9, 320, 13):
+        for x in range(5 + (row % 2) * 9, 320, 19):
             yy = top + 4 + ((x * 3 + row * 5) % max(1, bottom - top - 6))
-            grain = ROOM_PALETTE[12] if ((x // 13) % 3) else ROOM_PALETTE[10]
+            grain = ROOM_PALETTE[12] if ((x // 19) % 3) else ROOM_PALETTE[10]
             d.line((x, yy, min(319, x + 5 + row), yy), fill=grain)
-            if ((x // 13) % 4) == 0:
+            if ((x // 19) % 4) == 0:
                 d.point((x + 2, yy + 1), fill=ROOM_PALETTE[14])
 
-    for y in (159, 174, 190, 206, 219):
-        d.line((0, y, 319, y), fill=ROOM_PALETTE[12])
-
+    d.line((0, 216, 319, 216), fill=ROOM_PALETTE[12])
+    d.line((0, 220, 319, 220), fill=ROOM_PALETTE[8])
     d.rectangle((0, 221, 319, 223), fill=ROOM_PALETTE[9])
     return im
 

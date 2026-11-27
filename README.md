@@ -33,8 +33,10 @@ A successful build still needs an emulator play-test before it can be called tes
 ## Animated opening
 
 The ten uploaded GIFs in `res/frame_*.gif` are converted during CI by
-`tools/make_intro_frames.py` into ten 320x224, 4-bit indexed PNG images.
-All ten images share one 16-color palette snapped to Mega Drive's 9-bit RGB
-levels. The game displays each image for 10 VBlanks (~0.17 s at 60 Hz), then
-continues to the existing Yuno splash screen and main menu. START or A skips
-the sequence. No SEGA logo screen is used.
+`tools/make_intro_frames.py` into 208x144, 4-bit indexed PNG images. All frames
+share one 16-color Mega Drive palette. The animation is centered on a black
+screen and advances at approximately 10 frames per second. Tiles are streamed
+into an inactive VRAM buffer in small VBlank DMA chunks before the displayed
+frame is switched, avoiding large full-screen uploads and tearing. The sequence
+then continues to the existing Yuno splash screen and main menu. START or A
+skips it. No SEGA logo screen is used.

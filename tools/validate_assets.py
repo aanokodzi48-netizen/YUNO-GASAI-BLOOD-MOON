@@ -23,7 +23,7 @@ FX_ASSETS = {"window_morning.png", "lamp_glow.png", "sky_fx.png"}
 INTRO_ASSETS = {f"intro_{index:02d}.png" for index in range(10)}
 STRICT_ASSETS.update(INTRO_ASSETS)
 for intro_name in INTRO_ASSETS:
-    EXPECTED_SIZE[intro_name] = (320, 224)
+    EXPECTED_SIZE[intro_name] = (208, 144)
 
 def validate(path):
     path = Path(path)
