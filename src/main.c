@@ -440,8 +440,8 @@ static bool drawPhoneBase(void)
             {
                 kx=(u16)(px+3+col*5);
                 ky=(u16)(py+16+row*2);
-                phoneFillRect(kx,ky,4,1,10);
-                phoneFillRect((u16)(kx+1),ky,2,1,9);
+                phoneFillRect(kx,ky,3,1,10);
+                phoneFillRect((u16)(kx+1),ky,1,1,9);
                 drawRussianText(keys[row][col],(u16)(kx+1),ky,FALSE);
             }
         }
