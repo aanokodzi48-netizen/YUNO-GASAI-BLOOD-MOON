@@ -34,10 +34,10 @@ if 'if(pressed&BUTTON_X)' not in source or 'else if(pressed&BUTTON_C)' not in so
 if "TITLE IMAGE ERROR" in source or 'VDP_drawText("' in source:
     raise SystemExit("FAIL: English/default-font text remains in the game UI")
 
-match = re.search(r"ruGlyphRows\\[RU_GLYPH_COUNT\\]\\[8\\]=\\{([\\s\\S]*?)\\n\\};", source)
+match = re.search(r"ruGlyphRows\[RU_GLYPH_COUNT\]\[8\]=\{([\s\S]*?)\n\};", source)
 if not match:
     raise SystemExit("FAIL: Russian glyph table not found")
-glyphs = re.findall(r"\\{([^{}]+)\\}", match.group(1))
+glyphs = re.findall(r"\{([^{}]+)\}", match.group(1))
 if len(glyphs) != 51:
     raise SystemExit(f"FAIL: expected 51 glyphs, found {len(glyphs)}")
 for index, glyph in enumerate(glyphs):
