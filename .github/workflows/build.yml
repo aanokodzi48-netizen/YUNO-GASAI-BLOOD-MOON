@@ -39,11 +39,11 @@ jobs:
           make sgdk -j2
           sudo make install
       - name: Validate indexed assets
-        run: python3 tools/validate_assets.py res/yuno.png res/title.png
+        run: python3 tools/validate_assets.py res/yuno.png res/title.png res/phone_ui.png
       - name: Validate Yuno metasprite parts
         run: python3 tools/validate_yuno_assets.py res
       - name: Validate game UI logic
-        run: python3 tools/validate_game_ui.py src/main.c
+        run: python3 tools/validate_game_ui.py src/main.c res/resources.res
       - name: Compile game ROM
         shell: bash
         run: |

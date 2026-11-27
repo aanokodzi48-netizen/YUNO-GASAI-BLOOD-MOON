@@ -8,10 +8,8 @@
 #define PLAYER_STEP 2
 #define SPRITE_VRAM_TILES 128
 #define RU_GLYPH_COUNT 51
-#define PHONE_TILE_BASE TILE_USER_INDEX
-#define PHONE_TILE_COUNT 20
-#define PHONE_WIDTH 20
-#define PHONE_HEIGHT 26
+#define PHONE_IMAGE_WIDTH_TILES 16
+#define PHONE_IMAGE_HEIGHT_TILES 24
 
 typedef enum {
     STATE_SPLASH,
@@ -91,24 +89,6 @@ static const u16 goldPalette[16]={
 };
 static const u16 whitePalette[16]={
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    RGB24_TO_VDPCOLOR(0xFFFFFF)
-};
-static const u16 phonePalette[16]={
-    RGB24_TO_VDPCOLOR(0x000000),
-    RGB24_TO_VDPCOLOR(0x07121F),
-    RGB24_TO_VDPCOLOR(0x101E33),
-    RGB24_TO_VDPCOLOR(0x0B3B50),
-    RGB24_TO_VDPCOLOR(0x147A8C),
-    RGB24_TO_VDPCOLOR(0x25B9C4),
-    RGB24_TO_VDPCOLOR(0x062B3A),
-    RGB24_TO_VDPCOLOR(0x08121E),
-    RGB24_TO_VDPCOLOR(0x145A80),
-    RGB24_TO_VDPCOLOR(0x000000),
-    RGB24_TO_VDPCOLOR(0x2B6572),
-    RGB24_TO_VDPCOLOR(0x5DD3D5),
-    RGB24_TO_VDPCOLOR(0xD6FFFF),
-    RGB24_TO_VDPCOLOR(0x194B60),
-    RGB24_TO_VDPCOLOR(0x3A91A0),
     RGB24_TO_VDPCOLOR(0xFFFFFF)
 };
 
@@ -379,117 +359,34 @@ static void showYunoMetaError(YunoMetaResult r)
     drawMainMenu();
 }
 
-static void phoneTile(u16 x,u16 y,u8 color)
-{
-    u16 tile=(u16)(PHONE_TILE_BASE+color);
-    VDP_setTileMapXY(BG_A,
-        TILE_ATTR_FULL(PAL1,TRUE,FALSE,FALSE,tile),x,y);
-}
-
-static void phoneFillRect(u16 x,u16 y,u16 w,u16 h,u8 color)
-{
-    u16 xx,yy;
-    for(yy=y;yy<(u16)(y+h);yy++)
-        for(xx=x;xx<(u16)(x+w);xx++)
-            phoneTile(xx,yy,color);
-}
-
-static void phonePatternTile(u16 tileIndex,u8 foreground,u8 background,const u8 rows[8])
-{
-    u32 packed[8];
-    u8 *dst=(u8*)packed;
-    u16 row,col;
-    for(row=0;row<8;row++)
-    {
-        for(col=0;col<8;col++)
-        {
-            u8 pixel=(rows[row]&(1u<<(7u-col)))?foreground:background;
-            u16 offset=(u16)(row*4u+(col>>1));
-            if((col&1u)==0)dst[offset]=(u8)(pixel<<4);
-            else dst[offset]|=pixel;
-        }
-    }
-    VDP_loadTileData(packed,tileIndex,1,CPU);
-}
-
-static void phonePatternMap(u16 x,u16 y,u8 pattern)
-{
-    VDP_setTileMapXY(BG_A,
-        TILE_ATTR_FULL(PAL1,TRUE,FALSE,FALSE,
-            (u16)(PHONE_TILE_BASE+16u+pattern)),x,y);
-}
-
-static bool drawPhoneBase(void)
+static bool drawPhoneImage(void)
 {
     u16 cols=screenColumns(),rows=screenRows();
-    u16 px=(u16)((cols-PHONE_WIDTH)>>1);
-    u16 py=(u16)((rows-PHONE_HEIGHT)>>1);
-    u8 c;
+    u16 px=(u16)((cols-PHONE_IMAGE_WIDTH_TILES)>>1);
+    u16 py=(u16)((rows-PHONE_IMAGE_HEIGHT_TILES)>>1);
+    u32 tileEnd=(u32)TILE_USER_INDEX+(u32)phone_ui.tileset->numTile;
 
-    if((u16)(PHONE_TILE_BASE+PHONE_TILE_COUNT-1)>=TILE_SPRITE_INDEX)
+    /* Keep phone art in user VRAM and outside SGDK's sprite allocation. */
+    if(tileEnd>(u32)TILE_SPRITE_INDEX)
         return FALSE;
 
     VDP_setEnable(FALSE);
     VDP_clearPlane(BG_A,TRUE);
-    PAL_setPalette(PAL1,phonePalette,DMA);
-    PAL_setPalette(PAL2,whitePalette,DMA);
-    for(c=0;c<PHONE_TILE_COUNT;c++)
-        VDP_fillTileData((u8)((c<<4)|c),(u16)(PHONE_TILE_BASE+c),1,TRUE);
+    VDP_setBackgroundColor(0);
 
+    if(!VDP_drawImageEx(BG_A,&phone_ui,
+        TILE_ATTR_FULL(PAL1,TRUE,FALSE,FALSE,TILE_USER_INDEX),
+        px,py,TRUE,TRUE))
+    {
+        VDP_waitDMACompletion();
+        VDP_setEnable(TRUE);
+        return FALSE;
+    }
+
+    /* PAL1 is used by the phone art; PAL2 is the gold UI text palette. */
+    PAL_setPalette(PAL2,goldPalette,DMA);
     VDP_setTextPlane(BG_A);
     VDP_setTextPriority(TRUE);
-    phoneFillRect(0,0,cols,rows,1);
-
-    /* Тень и бирюзовый корпус раскрытой раскладушки. */
-    phoneFillRect((u16)(px-1),(u16)(py-1),22,28,2);
-    phoneFillRect(px,py,PHONE_WIDTH,PHONE_HEIGHT,3);
-    {
-        static const u8 corners[4][8]={
-            {0x00,0x1F,0x3F,0x7F,0x7F,0xFF,0xFF,0xFF},
-            {0x00,0xF8,0xFC,0xFE,0xFE,0xFF,0xFF,0xFF},
-            {0xFF,0xFF,0xFF,0xFF,0x7F,0x3F,0x1F,0x00},
-            {0xFF,0xFF,0xFF,0xFF,0xFE,0xFC,0xF8,0x00}
-        };
-        u8 i;
-        for(i=0;i<4;i++)phonePatternTile((u16)(PHONE_TILE_BASE+16u+i),3,2,corners[i]);
-        phonePatternMap(px,py,0);
-        phonePatternMap((u16)(px+PHONE_WIDTH-1),py,1);
-        phonePatternMap(px,(u16)(py+PHONE_HEIGHT-1),2);
-        phonePatternMap((u16)(px+PHONE_WIDTH-1),(u16)(py+PHONE_HEIGHT-1),3);
-    }
-    phoneFillRect((u16)(px+1),(u16)(py+1),18,24,4);
-    phoneFillRect((u16)(px+2),(u16)(py+2),16,10,6);
-    phoneFillRect((u16)(px+3),(u16)(py+3),14,8,7);
-
-    /* Динамик, индикатор и шарнир. */
-    phoneFillRect(px,(u16)(py+5),1,2,5);
-    phoneFillRect((u16)(px+19),(u16)(py+5),1,2,3);
-    phoneFillRect((u16)(px+7),(u16)(py+1),5,1,9);
-    phoneFillRect((u16)(px+13),(u16)(py+1),1,1,11);
-    phoneFillRect((u16)(px+1),(u16)(py+12),18,2,2);
-    phoneFillRect((u16)(px+2),(u16)(py+12),16,1,10);
-
-    /* Нижняя половина корпуса и чёрная клавиатура. */
-    phoneFillRect((u16)(px+2),(u16)(py+15),16,10,4);
-    phoneFillRect((u16)(px+3),(u16)(py+16),14,8,3);
-
-    {
-        static const char *keys[4][3]={{"1","2","3"},{"4","5","6"},{"7","8","9"},{"*","0","#"}};
-        u16 row,col,kx,ky;
-        for(row=0;row<4;row++)
-        {
-            for(col=0;col<3;col++)
-            {
-                kx=(u16)(px+3+col*5);
-                ky=(u16)(py+16+row*2);
-                phoneFillRect(kx,ky,3,1,10);
-                phoneFillRect((u16)(kx+1),ky,1,1,9);
-                drawRussianText(keys[row][col],(u16)(kx+1),ky,FALSE);
-            }
-        }
-    }
-    drawRussianText("ЮНО",(u16)(px+8),(u16)(py+24),FALSE);
-
     VDP_waitDMACompletion();
     VDP_setEnable(TRUE);
     return TRUE;
@@ -497,37 +394,39 @@ static bool drawPhoneBase(void)
 
 static void drawPhoneContacts(void)
 {
-    u16 cols=screenColumns();
-    u16 px=(u16)((cols-PHONE_WIDTH)>>1);
-    u16 py=(u16)((screenRows()-PHONE_HEIGHT)>>1);
-    if(!drawPhoneBase())
+    u16 px=(u16)((screenColumns()-PHONE_IMAGE_WIDTH_TILES)>>1);
+    u16 py=(u16)((screenRows()-PHONE_IMAGE_HEIGHT_TILES)>>1);
+
+    if(!drawPhoneImage())
     {
         VDP_clearPlane(BG_A,TRUE);
-        drawCenteredRussian("ОШИБКА ПАМЯТИ ТЕЛЕФОНА",13,TRUE);
+        drawCenteredRussian("ОШИБКА ТЕЛЕФОНА",13,TRUE);
+        drawCenteredRussian("СТАРТ: ВЫХОД",16,FALSE);
         return;
     }
-    phoneFillRect((u16)(px+3),(u16)(py+5),14,2,8);
-    drawRussianText("КОНТАКТЫ",(u16)(px+6),(u16)(py+3),FALSE);
-    drawRussianText("> ЮКИ",(u16)(px+5),(u16)(py+5),FALSE);
-    drawRussianText("X: ВЫБРАТЬ",(u16)(px+4),(u16)(py+8),FALSE);
-    drawRussianText("СТАРТ: ВЫХОД",(u16)(px+4),(u16)(py+9),FALSE);
+
+    drawRussianText("КОНТАКТЫ",(u16)(px+3),(u16)(py+3),FALSE);
+    drawRussianText("> ЮКИ",(u16)(px+4),(u16)(py+6),TRUE);
+    drawRussianText("X: ВЫБРАТЬ",(u16)(px+3),(u16)(py+8),FALSE);
 }
 
 static void drawPhoneChat(void)
 {
-    u16 cols=screenColumns();
-    u16 px=(u16)((cols-PHONE_WIDTH)>>1);
-    u16 py=(u16)((screenRows()-PHONE_HEIGHT)>>1);
-    if(!drawPhoneBase())
+    u16 px=(u16)((screenColumns()-PHONE_IMAGE_WIDTH_TILES)>>1);
+    u16 py=(u16)((screenRows()-PHONE_IMAGE_HEIGHT_TILES)>>1);
+
+    if(!drawPhoneImage())
     {
         VDP_clearPlane(BG_A,TRUE);
-        drawCenteredRussian("ОШИБКА ПАМЯТИ ТЕЛЕФОНА",13,TRUE);
+        drawCenteredRussian("ОШИБКА ТЕЛЕФОНА",13,TRUE);
+        drawCenteredRussian("СТАРТ: ВЫХОД",16,FALSE);
         return;
     }
-    drawRussianText("ЧАТ: ЮКИ",(u16)(px+6),(u16)(py+3),FALSE);
-    drawRussianText("СООБЩЕНИЙ НЕТ",(u16)(px+3),(u16)(py+6),FALSE);
-    drawRussianText("C: НАЗАД",(u16)(px+4),(u16)(py+9),FALSE);
-    drawRussianText("СТАРТ: ВЫХОД",(u16)(px+4),(u16)(py+10),FALSE);
+
+    drawRussianText("ЧАТ: ЮКИ",(u16)(px+4),(u16)(py+3),FALSE);
+    drawRussianText("СООБЩЕНИЙ",(u16)(px+2),(u16)(py+5),FALSE);
+    drawRussianText("НЕТ",(u16)(px+6),(u16)(py+6),TRUE);
+    drawRussianText("C: НАЗАД",(u16)(px+4),(u16)(py+8),TRUE);
 }
 
 static void closePhone(void)
