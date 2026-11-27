@@ -5,3 +5,5 @@ IMAGE room "room_bg.png" BEST
 IMAGE window_morning "window_morning.png" BEST
 TILESET ui_tiles "ui_tiles.png" NONE NONE ROW
 IMAGE title "title.png" BEST
+IMAGE sega_intro "sega_intro.png" BEST
+SPRITE sega_glint "sega_glint.png" 2 4 NONE 0

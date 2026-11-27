@@ -44,7 +44,7 @@ jobs:
         run: python3 tools/generate_room_assets.py
 
       - name: Validate indexed assets
-        run: python3 tools/validate_assets.py res/yuno.png res/room_bg.png res/window_morning.png res/lamp_glow.png res/sky_fx.png res/ui_tiles.png res/title.png
+        run: python3 tools/validate_assets.py res/yuno.png res/room_bg.png res/window_morning.png res/lamp_glow.png res/sky_fx.png res/ui_tiles.png res/title.png res/sega_intro.png res/sega_glint.png
 
       - name: Compile game ROM
         shell: bash

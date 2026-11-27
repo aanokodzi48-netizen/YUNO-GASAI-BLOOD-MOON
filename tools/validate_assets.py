@@ -9,7 +9,7 @@ PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 MD_LEVELS = {0, 36, 73, 109, 146, 182, 219, 255}
 STRICT_ASSETS = {
     "title.png", "room_bg.png", "window_morning.png",
-    "lamp_glow.png", "sky_fx.png", "ui_tiles.png"
+    "lamp_glow.png", "sky_fx.png", "ui_tiles.png", "sega_intro.png", "sega_glint.png"
 }
 EXPECTED_SIZE = {
     "title.png": (320, 224),
@@ -18,6 +18,8 @@ EXPECTED_SIZE = {
     "lamp_glow.png": (32, 32),
     "sky_fx.png": (32, 16),
     "ui_tiles.png": (128, 32),
+    "sega_intro.png": (320, 224),
+    "sega_glint.png": (16, 32),
 }
 FX_ASSETS = {"window_morning.png", "lamp_glow.png", "sky_fx.png"}
 

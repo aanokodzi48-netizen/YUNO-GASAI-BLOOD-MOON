@@ -24,20 +24,13 @@
 
 typedef enum
 {
+    STATE_SEGA_LOGO,
     STATE_SPLASH,
     STATE_MAIN_MENU,
     STATE_SETTINGS,
     STATE_PLAYING,
     STATE_PAUSED
 } GameState;
-
-typedef struct
-{
-    s16 x;
-    s16 y;
-    s16 w;
-    s16 h;
-} RoomBlock;
 
 typedef enum
 {
@@ -47,18 +40,11 @@ typedef enum
     ROOM_OBJECT_WARDROBE
 } RoomObject;
 
-/* Tight floor-level footprints: only the actual furniture bases block movement. */
-static const RoomBlock roomBlocks[] = {
-    { 12, 151,  34,   6 }, /* door threshold only */
-    { 58, 155,  43,   6 }, /* wardrobe plinth only */
-    {173, 162,  35,   6 }, /* bedside cabinet feet only */
-    {210, 171,  92,   9 }, /* bed frame, not mattress/headboard */
-    {283, 139,  33,   6 }  /* bookcase plinth only */
-};
-
 static Sprite *yunoSprite = NULL;
 static Sprite *lampGlowSprite = NULL;
 static Sprite *skyFxSprite = NULL;
+static Sprite *segaGlintSprite = NULL;
+static u16 segaIntroFrame = 0;
 static bool spritesInitialized = FALSE;
 static u16 windowTileBase = 0;
 static u16 uiTileBase = 0;
@@ -71,9 +57,9 @@ static u8 mainSelection = 0;
 static u8 settingsSelection = 0;
 static u16 navPrevious = 0;
 static u8 navRepeat = 0;
-static GameState gameState = STATE_SPLASH;
+static GameState gameState = STATE_SEGA_LOGO;
 
-static bool lampOn = TRUE;
+static bool lampOn = FALSE;
 static bool isMorning = FALSE;
 static u8 clockHour = 19;
 static u8 clockMinute = 45;
@@ -106,63 +92,62 @@ static const u16 uiPalette[16] = {
     0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 };
 
-/* PAL3 is the room palette: lamp/day states brighten it without reloading VRAM. */
+/* PAL3 matches the empty-room 16-color image palette. */
 static const u16 roomLampPalette[16] = {
     0x0000,
-    RGB24_TO_VDPCOLOR(0x49496D),
-    RGB24_TO_VDPCOLOR(0x6D496D),
-    RGB24_TO_VDPCOLOR(0x929292),
-    RGB24_TO_VDPCOLOR(0x926D92),
-    RGB24_TO_VDPCOLOR(0xB66D92),
-    RGB24_TO_VDPCOLOR(0xDB6D92),
-    RGB24_TO_VDPCOLOR(0xFF92DB),
-    RGB24_TO_VDPCOLOR(0x6D4924),
-    RGB24_TO_VDPCOLOR(0x926D49),
-    RGB24_TO_VDPCOLOR(0xB69249),
-    RGB24_TO_VDPCOLOR(0xDBB66D),
-    RGB24_TO_VDPCOLOR(0xDBB692),
-    RGB24_TO_VDPCOLOR(0xFFDBB6),
-    RGB24_TO_VDPCOLOR(0xFFFFDB),
-    RGB24_TO_VDPCOLOR(0xFFFFFF)
+    RGB24_TO_VDPCOLOR(0x240024),
+    RGB24_TO_VDPCOLOR(0x240049),
+    RGB24_TO_VDPCOLOR(0x490049),
+    RGB24_TO_VDPCOLOR(0x49246D),
+    RGB24_TO_VDPCOLOR(0x6D246D),
+    RGB24_TO_VDPCOLOR(0x924992),
+    RGB24_TO_VDPCOLOR(0xB649B6),
+    RGB24_TO_VDPCOLOR(0xDB6DB6),
+    RGB24_TO_VDPCOLOR(0x492400),
+    RGB24_TO_VDPCOLOR(0x6D2400),
+    RGB24_TO_VDPCOLOR(0x924924),
+    RGB24_TO_VDPCOLOR(0xB66D24),
+    RGB24_TO_VDPCOLOR(0xDB9249),
+    RGB24_TO_VDPCOLOR(0xFFB66D),
+    RGB24_TO_VDPCOLOR(0xFFDBB6)
 };
 
-/* Night palette when the lamp is OFF: the room becomes visibly dimmer. */
 static const u16 roomNightPalette[16] = {
     0x0000,
-    RGB24_TO_VDPCOLOR(0x242449),
-    RGB24_TO_VDPCOLOR(0x49246D),
-    RGB24_TO_VDPCOLOR(0x242449),
+    RGB24_TO_VDPCOLOR(0x000024),
+    RGB24_TO_VDPCOLOR(0x000049),
+    RGB24_TO_VDPCOLOR(0x240024),
+    RGB24_TO_VDPCOLOR(0x240049),
+    RGB24_TO_VDPCOLOR(0x240049),
     RGB24_TO_VDPCOLOR(0x492449),
     RGB24_TO_VDPCOLOR(0x49246D),
-    RGB24_TO_VDPCOLOR(0x6D2449),
-    RGB24_TO_VDPCOLOR(0x6D496D),
+    RGB24_TO_VDPCOLOR(0x6D246D),
+    RGB24_TO_VDPCOLOR(0x240000),
     RGB24_TO_VDPCOLOR(0x240000),
     RGB24_TO_VDPCOLOR(0x492400),
-    RGB24_TO_VDPCOLOR(0x492424),
-    RGB24_TO_VDPCOLOR(0x6D4924),
-    RGB24_TO_VDPCOLOR(0x6D4949),
-    RGB24_TO_VDPCOLOR(0x926D6D),
-    RGB24_TO_VDPCOLOR(0xB69292),
-    RGB24_TO_VDPCOLOR(0xDBB6B6)
+    RGB24_TO_VDPCOLOR(0x6D2400),
+    RGB24_TO_VDPCOLOR(0x924924),
+    RGB24_TO_VDPCOLOR(0xB64949),
+    RGB24_TO_VDPCOLOR(0xDB6D6D)
 };
 
 static const u16 roomDayPalette[16] = {
     0x0000,
-    RGB24_TO_VDPCOLOR(0x6D6D92),
-    RGB24_TO_VDPCOLOR(0x926D92),
-    RGB24_TO_VDPCOLOR(0xB6B6B6),
-    RGB24_TO_VDPCOLOR(0xB692B6),
-    RGB24_TO_VDPCOLOR(0xDB92B6),
-    RGB24_TO_VDPCOLOR(0xFFB6DB),
-    RGB24_TO_VDPCOLOR(0xFFDBDB),
-    RGB24_TO_VDPCOLOR(0x926D49),
-    RGB24_TO_VDPCOLOR(0xB6926D),
-    RGB24_TO_VDPCOLOR(0xDBB692),
+    RGB24_TO_VDPCOLOR(0x492449),
+    RGB24_TO_VDPCOLOR(0x49246D),
+    RGB24_TO_VDPCOLOR(0x6D246D),
+    RGB24_TO_VDPCOLOR(0x6D4992),
+    RGB24_TO_VDPCOLOR(0x924992),
+    RGB24_TO_VDPCOLOR(0xB66DB6),
+    RGB24_TO_VDPCOLOR(0xDB6DDB),
+    RGB24_TO_VDPCOLOR(0xFF92DB),
+    RGB24_TO_VDPCOLOR(0x6D4924),
+    RGB24_TO_VDPCOLOR(0x924924),
+    RGB24_TO_VDPCOLOR(0xB66D49),
+    RGB24_TO_VDPCOLOR(0xDB9249),
+    RGB24_TO_VDPCOLOR(0xFFB66D),
     RGB24_TO_VDPCOLOR(0xFFDB92),
-    RGB24_TO_VDPCOLOR(0xFFDBB6),
-    RGB24_TO_VDPCOLOR(0xFFFFDB),
-    RGB24_TO_VDPCOLOR(0xFFFFFF),
-    RGB24_TO_VDPCOLOR(0xFFFFFF)
+    RGB24_TO_VDPCOLOR(0xFFFFDB)
 };
 
 static void drawLine(const char *label, u16 x, u16 y, bool selected)
@@ -211,6 +196,48 @@ static void drawSplash(void)
     clearTitleText();
     drawLine("PRESS START", 14, 26, TRUE);
     VDP_setTextPalette(PAL2);
+}
+
+static bool drawSegaLogoIntro(void)
+{
+    VDP_clearPlane(BG_A, TRUE);
+    VDP_clearPlane(BG_B, TRUE);
+
+    if (!VDP_drawImageEx(BG_B, &sega_intro,
+                         TILE_ATTR_FULL(PAL0, FALSE, FALSE, FALSE, TILE_USER_INDEX),
+                         0, 0, TRUE, TRUE))
+        return FALSE;
+
+    PAL_setPalette(PAL0, sega_intro.palette->data, DMA);
+    PAL_setPalette(PAL1, sega_glint.palette->data, DMA);
+
+    SPR_initEx(SPRITE_VRAM_TILES);
+    spritesInitialized = TRUE;
+    segaGlintSprite = SPR_addSprite(&sega_glint, 48, 94,
+                                    TILE_ATTR(PAL1, TRUE, FALSE, FALSE));
+    if (segaGlintSprite == NULL)
+    {
+        SPR_end();
+        spritesInitialized = FALSE;
+        return FALSE;
+    }
+
+    segaIntroFrame = 0;
+    SPR_setVisibility(segaGlintSprite, VISIBLE);
+    return TRUE;
+}
+
+static void leaveSegaLogoIntro(void)
+{
+    if (spritesInitialized)
+    {
+        SPR_end();
+        spritesInitialized = FALSE;
+    }
+
+    segaGlintSprite = NULL;
+    gameState = STATE_SPLASH;
+    drawSplash();
 }
 
 static void drawMainMenu(void)
@@ -354,16 +381,8 @@ static bool drawRoomBackground(void)
 
 static bool drawMorningWindow(void)
 {
-    VDP_clearTileMapRect(BG_A, WINDOW_TILE_X, WINDOW_TILE_Y,
-                         WINDOW_TILE_W, WINDOW_TILE_H);
-
-    if (!(clockHour >= 7 && clockHour < 18))
-        return TRUE;
-
-    return VDP_setTileMapEx(BG_A, window_morning.tilemap,
-                            TILE_ATTR_FULL(PAL0, FALSE, FALSE, FALSE, windowTileBase),
-                            WINDOW_TILE_X, WINDOW_TILE_Y,
-                            0, 0, WINDOW_TILE_W, WINDOW_TILE_H, CPU);
+    /* The current room has no window or other interactable background objects. */
+    return TRUE;
 }
 
 static void updateRoomLighting(void)
@@ -375,7 +394,7 @@ static void updateRoomLighting(void)
 
     if (daytime)
         PAL_setPalette(PAL3, roomDayPalette, CPU);
-    else if (lampOn)
+    else if ((clockHour >= 18) && (clockHour < 20))
         PAL_setPalette(PAL3, roomLampPalette, CPU);
     else
         PAL_setPalette(PAL3, roomNightPalette, CPU);
@@ -395,35 +414,11 @@ static void updateSkySprite(void)
     }
 }
 
-static bool overlapsRoomBlock(s16 x, s16 y, const RoomBlock *block)
-{
-    /* Compact collision box around the character's feet, not the full sprite. */
-    const s16 hitLeft = x + 3;
-    const s16 hitTop = y + 10;
-    const s16 hitWidth = 10;
-    const s16 hitHeight = 6;
-
-    return (hitLeft < block->x + block->w) &&
-           (hitLeft + hitWidth > block->x) &&
-           (hitTop < block->y + block->h) &&
-           (hitTop + hitHeight > block->y);
-}
-
 static bool playerBlockedAt(s16 x, s16 y)
 {
-    u16 i;
-
-    if ((x < PLAYER_MIN_X) || (x > PLAYER_MAX_X) ||
-        (y < PLAYER_MIN_Y) || (y > PLAYER_MAX_Y))
-        return TRUE;
-
-    for (i = 0; i < (sizeof(roomBlocks) / sizeof(roomBlocks[0])); i++)
-    {
-        if (overlapsRoomBlock(x, y, &roomBlocks[i]))
-            return TRUE;
-    }
-
-    return FALSE;
+    /* The room is deliberately empty for this stage. Only screen/floor bounds remain. */
+    return ((x < PLAYER_MIN_X) || (x > PLAYER_MAX_X) ||
+            (y < PLAYER_MIN_Y) || (y > PLAYER_MAX_Y));
 }
 
 static void movePlayer(u16 pad)
@@ -462,36 +457,8 @@ static s32 distanceSquared(s16 x1, s16 y1, s16 x2, s16 y2)
 
 static RoomObject getNearbyObject(void)
 {
-    const s16 centerX = playerX + 8;
-    const s16 centerY = playerY + 13;
-    s32 distance;
-    s32 bestDistance = 0x7FFFFFFF;
-    RoomObject nearest = ROOM_OBJECT_NONE;
-
-    /* Interaction appears only at the front edge of the bedside cabinet. */
-    distance = distanceSquared(centerX, centerY, 191, 160);
-    if ((distance <= (19L * 19L)) && (distance < bestDistance))
-    {
-        bestDistance = distance;
-        nearest = ROOM_OBJECT_LAMP;
-    }
-
-    /* The bed prompt is deliberately short-range, from its front side only. */
-    distance = distanceSquared(centerX, centerY, 260, 178);
-    if ((distance <= (21L * 21L)) && (distance < bestDistance))
-    {
-        bestDistance = distance;
-        nearest = ROOM_OBJECT_BED;
-    }
-
-    distance = distanceSquared(centerX, centerY, 80, 159);
-    if ((distance <= (19L * 19L)) && (distance < bestDistance))
-    {
-        bestDistance = distance;
-        nearest = ROOM_OBJECT_WARDROBE;
-    }
-
-    return nearest;
+    /* The room contains no interactable objects yet. */
+    return ROOM_OBJECT_NONE;
 }
 
 static u16 uiTile(u16 index)
@@ -735,7 +702,7 @@ static bool startGame(void)
     SPR_initEx(SPRITE_VRAM_TILES);
     spritesInitialized = TRUE;
 
-    lampOn = TRUE;
+    lampOn = FALSE;
     isMorning = FALSE;
     clockHour = 19;
     clockMinute = 45;
@@ -762,21 +729,9 @@ static bool startGame(void)
 
     updateRoomLighting();
 
-    /* FX first, player last: Yuno remains visually in front of light effects. */
-    lampGlowSprite = SPR_addSprite(&lamp_glow, 174, 94,
-                                   TILE_ATTR(PAL0, TRUE, FALSE, FALSE));
-    skyFxSprite = SPR_addSprite(&sky_fx, 176, 33,
-                                TILE_ATTR(PAL0, TRUE, FALSE, FALSE));
-    if ((lampGlowSprite == NULL) || (skyFxSprite == NULL))
-    {
-        SPR_end();
-        spritesInitialized = FALSE;
-        lampGlowSprite = NULL;
-        skyFxSprite = NULL;
-        return FALSE;
-    }
-
-    SPR_setAnimAndFrame(skyFxSprite, 0, 0);
+    /* The first room iteration is intentionally empty: only Yuno is visible. */
+    lampGlowSprite = NULL;
+    skyFxSprite = NULL;
     updateRoomLighting();
 
     playerX = 144;
@@ -821,6 +776,8 @@ static void returnToMainMenu(void)
     yunoSprite = NULL;
     lampGlowSprite = NULL;
     skyFxSprite = NULL;
+    segaGlintSprite = NULL;
+    segaIntroFrame = 0;
     windowTileBase = 0;
     uiTileBase = 0;
     messageTimer = 0;
@@ -843,11 +800,13 @@ int main(bool hardReset)
     (void) hardReset;
 
     /* Rebuild all state explicitly after a Mega Drive / MD.emu reset. */
-    gameState = STATE_SPLASH;
+    gameState = STATE_SEGA_LOGO;
     spritesInitialized = FALSE;
     yunoSprite = NULL;
     lampGlowSprite = NULL;
     skyFxSprite = NULL;
+    segaGlintSprite = NULL;
+    segaIntroFrame = 0;
     windowTileBase = 0;
     uiTileBase = 0;
     playerX = 144;
@@ -857,7 +816,7 @@ int main(bool hardReset)
     settingsSelection = 0;
     navPrevious = 0;
     navRepeat = 0;
-    lampOn = TRUE;
+    lampOn = FALSE;
     isMorning = FALSE;
     clockHour = 19;
     clockMinute = 45;
@@ -872,7 +831,8 @@ int main(bool hardReset)
     JOY_reset();
     JOY_update();
     oldPad = JOY_readJoypad(JOY_1);
-    drawSplash();
+    if (!drawSegaLogoIntro())
+        showFatalError("SEGA LOGO ERROR");
 
     while (1)
     {
@@ -880,9 +840,32 @@ int main(bool hardReset)
         pressed = pad & (u16)~oldPad;
         oldPad = pad;
 
-        if (gameState == STATE_SPLASH)
+        if (gameState == STATE_SEGA_LOGO)
         {
-            if (pad & (BUTTON_START | BUTTON_A))
+            if (pressed & (BUTTON_START | BUTTON_A))
+            {
+                leaveSegaLogoIntro();
+            }
+            else
+            {
+                if (segaIntroFrame < 120)
+                    segaIntroFrame++;
+
+                if (segaGlintSprite != NULL)
+                {
+                    u16 glintX = (segaIntroFrame < 100)
+                        ? (u16)(48 + (segaIntroFrame * 2))
+                        : 248;
+                    SPR_setPosition(segaGlintSprite, glintX, 94);
+                }
+
+                if (segaIntroFrame >= 120)
+                    leaveSegaLogoIntro();
+            }
+        }
+        else if (gameState == STATE_SPLASH)
+        {
+            if (pressed & (BUTTON_START | BUTTON_A))
                 enterMainMenuFromSplash();
         }
         else if (gameState == STATE_MAIN_MENU)
