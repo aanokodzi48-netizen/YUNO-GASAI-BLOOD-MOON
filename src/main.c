@@ -19,7 +19,6 @@ static u8 mainSelection=0,settingsSelection=0,navRepeat=0; static u16 navPreviou
 static GameState gameState=STATE_SPLASH;
 static const u16 goldPalette[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,RGB24_TO_VDPCOLOR(0xFFD84D)};
 static const u16 whitePalette[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,RGB24_TO_VDPCOLOR(0xFFFFFF)};
-static const u16 pausePalette[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,RGB24_TO_VDPCOLOR(0x17172E)};
 static void drawLine(const char*s,u16 x,u16 y,bool selected){VDP_setTextPalette(selected?PAL1:PAL2);VDP_drawText(s,x,y);}
 static void clearTitleText(void){VDP_clearTextArea(0,18,40,10);}
 static bool drawTitleBackground(void){
@@ -96,6 +95,8 @@ static YunoMetaResult startGame(void){
  * Yuno is hidden while the phone is open, but her coordinates are not changed.
  */
 static bool drawPhoneFrame(void){
+ /* Register 17 defaults to width zero; explicitly span the full H40/H32 width. */
+ VDP_setWindowHPos(FALSE,(u16)(VDP_getScreenWidth() >> 4));
  VDP_setWindowFullScreen();
  VDP_clearPlane(WINDOW,TRUE);
  PAL_setPalette(PAL1,phone_ui.palette->data,CPU);
