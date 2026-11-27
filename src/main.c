@@ -40,9 +40,8 @@ static void buildRussianFont(void){
   if((col&1u)==0)dst[g*32u+row*4u+(col>>1)]=(u8)(pixel<<4);
   else dst[g*32u+row*4u+(col>>1)]|=pixel;
  }
- ruFontTileBase=(u16)(TILE_USER_INDEX+title.tileset->numTile);
- if((ruFontTileBase+RU_GLYPH_COUNT)>=2048u)ruFontTileBase=1900u;
- VDP_loadTileData((const u32*)ruFontTiles,ruFontTileBase,RU_GLYPH_COUNT,DMA);
+ ruFontTileBase=TILE_FONT_INDEX;
+ VDP_loadFontData((const u32*)ruFontTiles,RU_GLYPH_COUNT,DMA);
 }
 static u16 decodeRussianCodepoint(const u8 **cursor){
  const u8*p=*cursor;u16 cp;
