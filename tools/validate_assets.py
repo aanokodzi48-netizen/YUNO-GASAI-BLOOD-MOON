@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the PNG assets that are still used by the Mega Drive game."""
+"""Validate generated Mega Drive PNG assets and existing character sprites."""
 import struct
 import sys
 import zlib
@@ -8,8 +8,13 @@ from pathlib import Path
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 MD_LEVELS = {0, 36, 73, 109, 146, 182, 219, 255}
 STRICT_ASSETS = {"title.png"}
-EXPECTED_SIZE = {"title.png": (320, 224)}
-
+EXPECTED_SIZE = {
+    "title.png": (320, 224),
+}
+INTRO_ASSETS = {f"intro_{index:02d}.png" for index in range(10)}
+STRICT_ASSETS.update(INTRO_ASSETS)
+for intro_name in INTRO_ASSETS:
+    EXPECTED_SIZE[intro_name] = (208, 144)
 
 def validate(path):
     path = Path(path)
@@ -76,7 +81,7 @@ def validate(path):
 
     if path.name in STRICT_ASSETS:
         if len(palette) != 16 * 3:
-            raise ValueError(f"{path}: title art must have exactly 16 palette entries")
+            raise ValueError(f"{path}: generated room/UI art must have exactly 16 palette entries")
         invalid = [value for value in palette if value not in MD_LEVELS]
         if invalid:
             raise ValueError(
@@ -98,12 +103,19 @@ def validate(path):
     )
     return palette
 
-
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         raise SystemExit("usage: validate_assets.py PNG [PNG ...]")
 
-    for item in sys.argv[1:]:
-        validate(item)
+    palettes = {Path(item).name: validate(item) for item in sys.argv[1:]}
+    missing_intro = INTRO_ASSETS.difference(palettes)
+    if missing_intro:
+        raise SystemExit("ERROR: missing intro frames: " + ", ".join(sorted(missing_intro)))
 
-    print("OK all supplied game assets validated. No intro/GIF assets are required.")
+    shared_intro_palette = palettes["intro_00.png"]
+    for name in sorted(INTRO_ASSETS):
+        if palettes[name] != shared_intro_palette:
+            raise SystemExit(
+                f"ERROR: {name} does not use the same palette as intro_00.png"
+            )
+    print("OK all ten intro PNGs share the same 16-color Mega Drive palette.")

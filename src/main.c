@@ -27,11 +27,12 @@ static void cycleRunButton(s16 d){if(runButton==BUTTON_A)runButton=(d>0)?BUTTON_
 static char getButtonLetter(u16 b){if(b==BUTTON_A)return 'A';if(b==BUTTON_B)return 'B';return 'C';}
 static void drawSettings(void){char line[32];clearTitleText();drawLine("SETTINGS",16,18,FALSE);sprintf(line,"%c RUN BUTTON: %c",settingsSelection==0?'>':' ',getButtonLetter(runButton));drawLine(line,12,21,settingsSelection==0);drawLine(settingsSelection==1?"> RESET DEFAULT":"  RESET DEFAULT",12,23,settingsSelection==1);drawLine(settingsSelection==2?"> BACK":"  BACK",17,25,settingsSelection==2);drawLine("A/START: SELECT  B: BACK",8,26,FALSE);drawLine("LEFT/RIGHT: CHANGE",11,27,FALSE);VDP_setTextPalette(PAL2);}
 static bool menuDirection(u16 pad,u16*direction){u16 cur=pad&(BUTTON_UP|BUTTON_DOWN);if(!cur){navPrevious=0;navRepeat=0;return FALSE;}if(cur!=navPrevious){navPrevious=cur;navRepeat=0;*direction=cur;return TRUE;}if(navRepeat<12){navRepeat++;return FALSE;}navRepeat=7;*direction=cur;return TRUE;}
+/* A cleared plane is transparent; the VDP backdrop supplies the solid white playfield.
+   Do not tile-fill with a system-font tile: that tile contains glyph pixels, not a blank tile. */
 static void drawBlankPlayfield(void){
- const u16 tile=TILE_ATTR_FULL(PAL0,FALSE,FALSE,FALSE,TILE_SYSTEM_INDEX+15);
- const u16 w=VDP_getScreenWidth()>>3,h=VDP_getScreenHeight()>>3;
- VDP_clearPlane(BG_A,TRUE);VDP_clearPlane(BG_B,TRUE);PAL_setPalette(PAL0,whitePalette,CPU);VDP_setBackgroundColor(15);
- VDP_fillTileMapRect(BG_A,tile,0,0,w,h);VDP_fillTileMapRect(BG_B,tile,0,0,w,h);VDP_setTextPlane(BG_A);VDP_setTextPalette(PAL0);
+ VDP_clearPlane(BG_A,TRUE);VDP_clearPlane(BG_B,TRUE);
+ PAL_setPalette(PAL0,whitePalette,CPU);VDP_setBackgroundColor(15);
+ VDP_setTextPlane(BG_A);VDP_setTextPalette(PAL1);
 }
 static bool playerBlockedAt(s16 x,s16 y){return x<PLAYER_MIN_X||x>PLAYER_MAX_X||y<PLAYER_MIN_Y||y>PLAYER_MAX_Y;}
 static void movePlayer(u16 pad){s16 speed=(pad&runButton)?2:1,nx=playerX,ny=playerY;if(pad&BUTTON_LEFT)nx-=speed;else if(pad&BUTTON_RIGHT)nx+=speed;if(nx!=playerX&&!playerBlockedAt(nx,playerY))playerX=nx;if(pad&BUTTON_UP)ny-=speed;else if(pad&BUTTON_DOWN)ny+=speed;if(ny!=playerY&&!playerBlockedAt(playerX,ny))playerY=ny;if(pad&(BUTTON_LEFT|BUTTON_RIGHT|BUTTON_UP|BUTTON_DOWN))animClock++;else animClock=0;SPR_setAnimAndFrame(yunoSprite,1,(animClock>>3)&3);SPR_setPosition(yunoSprite,playerX,playerY);}
