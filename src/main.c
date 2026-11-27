@@ -128,20 +128,18 @@ static void closePhone(void){
 static void drawPhoneContacts(void){
  if(!drawPhoneFrame()){closePhone();return;}
  VDP_drawText("PHONE",18,5);
- VDP_drawText(phoneContactSelection==0?">YUKI":" YUKI",18,8);
- VDP_drawText(phoneContactSelection==1?">NONE":" NONE",18,10);
- VDP_drawText("X/A OPEN",14,26);
- VDP_drawText("START CLOSE",14,27);
+ VDP_drawText(phoneContactSelection==0?">YUKI":">NONE",18,7);
+ VDP_drawText(phoneContactSelection==0?"X/A GO":"EMPTY",17,8);
+ VDP_drawText("START",18,9);
 }
 
 static void drawPhoneChat(void){
  if(!drawPhoneFrame()){closePhone();return;}
  VDP_drawText("YUKI",18,5);
- VDP_drawText("CHAT",18,8);
+ VDP_drawText("CHAT",18,7);
  /* Intentionally empty: no messages are created in this version. */
- VDP_drawText("B/C",18,9);
- VDP_drawText("BACK",18,10);
- VDP_drawText("START CLOSE",14,27);
+ VDP_drawText("B/C BK",17,8);
+ VDP_drawText("START",18,9);
 }
 
 static void openPhone(void){
