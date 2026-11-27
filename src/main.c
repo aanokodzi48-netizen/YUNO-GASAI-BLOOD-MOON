@@ -72,7 +72,9 @@ static void returnToMainMenu(void){
  /* Release only Yuno's six objects. Keep the shared Sprite Engine alive. */
  YunoMeta_destroy();
  gameState=STATE_MAIN_MENU;mainSelection=0;navPrevious=0;navRepeat=0;
- if(!drawTitleBackground())showFatalError("TITLE IMAGE ERROR");drawMainMenu();
+ if(!drawTitleBackground())
+  showFatalError("TITLE IMAGE ERROR");
+ drawMainMenu();
 }
 int main(bool hardReset){
  u16 pad,pressed,direction=0;(void)hardReset;gameState=STATE_SPLASH;spritesInitialized=FALSE;playerX=140;playerY=52;mainSelection=0;settingsSelection=0;navPrevious=0;navRepeat=0;
@@ -83,6 +85,8 @@ int main(bool hardReset){
  else if(gameState==STATE_SETTINGS){if(pressed&BUTTON_B){gameState=STATE_MAIN_MENU;mainSelection=0;navPrevious=0;navRepeat=0;drawMainMenu();}else{if(menuDirection(pad,&direction)){if((direction&BUTTON_UP)&&settingsSelection>0)settingsSelection--;else if((direction&BUTTON_DOWN)&&settingsSelection<2)settingsSelection++;drawSettings();}if((pressed&BUTTON_LEFT)&&settingsSelection==0){cycleRunButton(-1);drawSettings();}else if((pressed&BUTTON_RIGHT)&&settingsSelection==0){cycleRunButton(1);drawSettings();}else if(pressed&(BUTTON_A|BUTTON_START)){if(settingsSelection==0){cycleRunButton(1);drawSettings();}else if(settingsSelection==1){runButton=BUTTON_B;drawSettings();}else{gameState=STATE_MAIN_MENU;mainSelection=0;navPrevious=0;navRepeat=0;drawMainMenu();}}}}
  else if(gameState==STATE_PLAYING){if(pressed&BUTTON_START){gameState=STATE_PAUSED;drawPause();}else movePlayer(pad);}
  else if(gameState==STATE_PAUSED){if(pressed&(BUTTON_START|BUTTON_A)){gameState=STATE_PLAYING;clearPauseOverlay();}else if(pressed&BUTTON_B)returnToMainMenu();}
- if(spritesInitialized)SPR_update();SYS_doVBlankProcess();
+ if(spritesInitialized)
+  SPR_update();
+ SYS_doVBlankProcess();
  }return 0;
 }
