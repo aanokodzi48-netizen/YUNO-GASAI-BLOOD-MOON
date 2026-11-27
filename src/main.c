@@ -420,7 +420,9 @@ static bool drawPhoneBase(void)
     phoneFillRect((u16)(px+3),(u16)(py+3),14,8,7);
 
     /* Динамик, индикатор и шарнир. */
-    phoneFillRect((u16)(px+8),(u16)(py+1),4,1,9);
+    phoneFillRect(px,(u16)(py+5),1,2,5);
+    phoneFillRect((u16)(px+19),(u16)(py+5),1,2,3);
+    phoneFillRect((u16)(px+7),(u16)(py+1),5,1,9);
     phoneFillRect((u16)(px+13),(u16)(py+1),1,1,11);
     phoneFillRect((u16)(px+1),(u16)(py+12),18,2,2);
     phoneFillRect((u16)(px+2),(u16)(py+12),16,1,10);
@@ -438,12 +440,13 @@ static bool drawPhoneBase(void)
             {
                 kx=(u16)(px+3+col*5);
                 ky=(u16)(py+16+row*2);
-                phoneFillRect(kx,ky,4,2,10);
-                phoneFillRect((u16)(kx+1),(u16)(ky+0),2,1,9);
+                phoneFillRect(kx,ky,4,1,10);
+                phoneFillRect((u16)(kx+1),ky,2,1,9);
                 drawRussianText(keys[row][col],(u16)(kx+1),ky,FALSE);
             }
         }
     }
+    drawRussianText("ЮНО",(u16)(px+8),(u16)(py+24),FALSE);
 
     VDP_waitDMACompletion();
     VDP_setEnable(TRUE);
