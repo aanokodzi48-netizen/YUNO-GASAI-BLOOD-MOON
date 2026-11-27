@@ -6,9 +6,14 @@
 #define PLAYER_MIN_Y 0
 #define PLAYER_MAX_Y 104
 #define SPRITE_VRAM_TILES 128
-typedef enum { STATE_SPLASH, STATE_MAIN_MENU, STATE_SETTINGS, STATE_PLAYING, STATE_PAUSED } GameState;
+typedef enum { STATE_SPLASH, STATE_MAIN_MENU, STATE_SETTINGS, STATE_PLAYING, STATE_PHONE_CONTACTS, STATE_PHONE_CHAT } GameState;
+#define PHONE_IMAGE_X_TILE 12
+#define PHONE_IMAGE_Y_TILE 2
 static bool spritesInitialized=FALSE;
 static s16 playerX=140,playerY=52; static u16 oldPad=0,runButton=BUTTON_B;
+static u8 runSpeed=2;
+static u16 phonePreviousPalette[16];
+static bool phonePaletteSaved=FALSE;
 static u8 mainSelection=0,settingsSelection=0,navRepeat=0; static u16 navPrevious=0;
 static GameState gameState=STATE_SPLASH;
 static const u16 goldPalette[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,RGB24_TO_VDPCOLOR(0xFFD84D)};
@@ -28,10 +33,24 @@ static bool drawTitleBackground(void){
 }
 static void showFatalError(const char*s){VDP_setEnable(TRUE);VDP_clearPlane(BG_A,TRUE);VDP_clearPlane(BG_B,TRUE);VDP_setTextPalette(PAL1);VDP_drawText(s,7,13);while(1)SYS_doVBlankProcess();}
 static void drawSplash(void){if(!drawTitleBackground())showFatalError("TITLE IMAGE ERROR");clearTitleText();drawLine("PRESS START",14,26,TRUE);VDP_setTextPalette(PAL2);}
-static void drawMainMenu(void){clearTitleText();drawLine("YUNO GASAI: BLOOD MOON",9,20,FALSE);drawLine(mainSelection==0?"> START":"  START",16,23,mainSelection==0);drawLine(mainSelection==1?"> SETTINGS":"  SETTINGS",14,25,mainSelection==1);VDP_setTextPalette(PAL2);}
+static void drawMainMenu(void){
+ char speedLine[28];
+ clearTitleText();
+ drawLine("YUNO GASAI: BLOOD MOON",9,18,FALSE);
+ drawLine(mainSelection==0?"> START":"  START",16,21,mainSelection==0);
+ sprintf(speedLine,"%c RUN SPEED: %uX",mainSelection==1?'>':' ',runSpeed);
+ drawLine(speedLine,10,23,mainSelection==1);
+ drawLine(mainSelection==2?"> SETTINGS":"  SETTINGS",14,25,mainSelection==2);
+ drawLine("LEFT/RIGHT: CHANGE SPEED",7,27,FALSE);
+ VDP_setTextPalette(PAL2);
+}
 static void enterMainMenuFromSplash(void){gameState=STATE_MAIN_MENU;mainSelection=0;navPrevious=0;navRepeat=0;/* Keep the already loaded title background; reloading it caused a visible blank-color flash. */drawMainMenu();}
 static void cycleRunButton(s16 d){if(runButton==BUTTON_A)runButton=(d>0)?BUTTON_B:BUTTON_C;else if(runButton==BUTTON_B)runButton=(d>0)?BUTTON_C:BUTTON_A;else runButton=(d>0)?BUTTON_A:BUTTON_B;}
 static char getButtonLetter(u16 b){if(b==BUTTON_A)return 'A';if(b==BUTTON_B)return 'B';return 'C';}
+static void cycleRunSpeed(s16 direction){
+ if(direction>0) runSpeed=(runSpeed>=4)?2:(u8)(runSpeed+1);
+ else runSpeed=(runSpeed<=2)?4:(u8)(runSpeed-1);
+}
 static void drawSettings(void){char line[32];clearTitleText();drawLine("SETTINGS",16,18,FALSE);sprintf(line,"%c RUN BUTTON: %c",settingsSelection==0?'>':' ',getButtonLetter(runButton));drawLine(line,12,21,settingsSelection==0);drawLine(settingsSelection==1?"> RESET DEFAULT":"  RESET DEFAULT",12,23,settingsSelection==1);drawLine(settingsSelection==2?"> BACK":"  BACK",17,25,settingsSelection==2);drawLine("A/START: SELECT  B: BACK",8,26,FALSE);drawLine("LEFT/RIGHT: CHANGE",11,27,FALSE);VDP_setTextPalette(PAL2);}
 static bool menuDirection(u16 pad,u16*direction){u16 cur=pad&(BUTTON_UP|BUTTON_DOWN);if(!cur){navPrevious=0;navRepeat=0;return FALSE;}if(cur!=navPrevious){navPrevious=cur;navRepeat=0;*direction=cur;return TRUE;}if(navRepeat<12){navRepeat++;return FALSE;}navRepeat=7;*direction=cur;return TRUE;}
 /* A cleared plane is transparent; the VDP backdrop supplies the solid white playfield.
@@ -43,7 +62,7 @@ static void drawBlankPlayfield(void){
 }
 static bool playerBlockedAt(s16 x,s16 y){return x<PLAYER_MIN_X||x>PLAYER_MAX_X||y<PLAYER_MIN_Y||y>PLAYER_MAX_Y;}
 static void movePlayer(u16 pad){
- s16 speed=(pad&runButton)?2:1,nx=playerX,ny=playerY;
+ s16 speed=(pad&runButton)?(s16)runSpeed:1,nx=playerX,ny=playerY;
  if(pad&BUTTON_LEFT)nx-=speed;else if(pad&BUTTON_RIGHT)nx+=speed;
  if(nx!=playerX&&!playerBlockedAt(nx,playerY))playerX=nx;
  if(pad&BUTTON_UP)ny-=speed;else if(pad&BUTTON_DOWN)ny+=speed;
@@ -70,23 +89,69 @@ static YunoMetaResult startGame(void){
  SPR_update();VDP_waitDMACompletion();VDP_setEnable(TRUE);gameState=STATE_PLAYING;
  return YUNO_META_OK;
 }
-static void clearPauseOverlay(void){VDP_clearTextArea(10,2,20,7);}
-static void drawPause(void){
- /* Keep the pause menu above the player and use a high-contrast dark font. */
- clearPauseOverlay();PAL_setPalette(PAL1,pausePalette,CPU);VDP_setTextPalette(PAL1);
- VDP_drawText("---- PAUSED ----",12,3);
- VDP_drawText("START: RESUME",14,5);
- VDP_drawText("B: MAIN MENU",15,7);
+/*
+ * The phone is drawn on the full-screen WINDOW plane. WINDOW is above both
+ * background planes and hardware sprites; text tiles are also high priority.
+ * Yuno is hidden while the phone is open, but her coordinates are not changed.
+ */
+static bool drawPhoneFrame(void){
+ VDP_setWindowFullScreen();
+ VDP_clearPlane(WINDOW,TRUE);
+ PAL_setPalette(PAL1,phone_ui.palette->data,CPU);
+ if(!VDP_drawImageEx(
+      WINDOW,&phone_ui,
+      TILE_ATTR_FULL(PAL1,TRUE,FALSE,FALSE,TILE_USER_INDEX),
+      PHONE_IMAGE_X_TILE,PHONE_IMAGE_Y_TILE,FALSE,TRUE))
+  return FALSE;
+ VDP_waitDMACompletion();
+ VDP_setTextPlane(WINDOW);
+ VDP_setTextPalette(PAL2);
+ VDP_setTextPriority(TRUE);
+ return TRUE;
 }
-static void returnToMainMenu(void){
- /* Release only Yuno's six objects. Keep the shared Sprite Engine alive. */
- YunoMeta_destroy();
- spritesInitialized=SPR_isInitialized();
- gameState=STATE_MAIN_MENU;mainSelection=0;navPrevious=0;navRepeat=0;
- if(!drawTitleBackground())
-  showFatalError("TITLE IMAGE ERROR");
- drawMainMenu();
+
+static void closePhone(void){
+ VDP_clearPlane(WINDOW,TRUE);
+ VDP_setWindowOff();
+ VDP_setTextPlane(BG_A);
+ VDP_setTextPalette(PAL1);
+ VDP_setTextPriority(FALSE);
+ if(phonePaletteSaved){
+  PAL_setPalette(PAL1,phonePreviousPalette,CPU);
+  phonePaletteSaved=FALSE;
+ }
+ YunoMeta_setVisible(TRUE);
+ gameState=STATE_PLAYING;
 }
+
+static void drawPhoneContacts(void){
+ if(!drawPhoneFrame()){closePhone();return;}
+ VDP_drawText("PHONE",18,5);
+ VDP_drawText(">YUKI",18,8);
+ VDP_drawText("X OPEN",18,10);
+ VDP_drawText("START CLOSE",14,27);
+}
+
+static void drawPhoneChat(void){
+ if(!drawPhoneFrame()){closePhone();return;}
+ VDP_drawText("YUKI",18,5);
+ VDP_drawText("CHAT",18,8);
+ /* Intentionally empty: no messages are created in this version. */
+ VDP_drawText("B/C",18,10);
+ VDP_drawText("BACK",18,11);
+ VDP_drawText("START CLOSE",14,27);
+}
+
+static void openPhone(void){
+ if(!phonePaletteSaved){
+  PAL_getPalette(PAL1,phonePreviousPalette);
+  phonePaletteSaved=TRUE;
+ }
+ gameState=STATE_PHONE_CONTACTS;
+ YunoMeta_setVisible(FALSE);
+ drawPhoneContacts();
+}
+
 static const char *getYunoMetaErrorText(YunoMetaResult result){
  switch(result){
   case YUNO_META_ERR_ALREADY_CREATED:return "ALREADY EXISTS";
@@ -129,10 +194,38 @@ int main(bool hardReset){
  VDP_setEnable(FALSE);VDP_setBackgroundColor(0);VDP_setTextPlane(BG_A);JOY_reset();JOY_update();oldPad=JOY_readJoypad(JOY_1);drawSplash();
  while(1){pad=JOY_readJoypad(JOY_1);pressed=pad&(u16)~oldPad;oldPad=pad;
  if(gameState==STATE_SPLASH){if(pressed&(BUTTON_START|BUTTON_A))enterMainMenuFromSplash();}
- else if(gameState==STATE_MAIN_MENU){if(menuDirection(pad,&direction)){if(direction&BUTTON_UP)mainSelection=0;else if(direction&BUTTON_DOWN)mainSelection=1;drawMainMenu();}if(pressed&(BUTTON_A|BUTTON_START)){if(mainSelection==0){playerResult=startGame();if(playerResult!=YUNO_META_OK)showYunoMetaError(playerResult);}else{gameState=STATE_SETTINGS;settingsSelection=0;navPrevious=0;navRepeat=0;drawSettings();}}}
- else if(gameState==STATE_SETTINGS){if(pressed&BUTTON_B){gameState=STATE_MAIN_MENU;mainSelection=0;navPrevious=0;navRepeat=0;drawMainMenu();}else{if(menuDirection(pad,&direction)){if((direction&BUTTON_UP)&&settingsSelection>0)settingsSelection--;else if((direction&BUTTON_DOWN)&&settingsSelection<2)settingsSelection++;drawSettings();}if((pressed&BUTTON_LEFT)&&settingsSelection==0){cycleRunButton(-1);drawSettings();}else if((pressed&BUTTON_RIGHT)&&settingsSelection==0){cycleRunButton(1);drawSettings();}else if(pressed&(BUTTON_A|BUTTON_START)){if(settingsSelection==0){cycleRunButton(1);drawSettings();}else if(settingsSelection==1){runButton=BUTTON_B;drawSettings();}else{gameState=STATE_MAIN_MENU;mainSelection=0;navPrevious=0;navRepeat=0;drawMainMenu();}}}}
- else if(gameState==STATE_PLAYING){if(pressed&BUTTON_START){gameState=STATE_PAUSED;drawPause();}else movePlayer(pad);}
- else if(gameState==STATE_PAUSED){if(pressed&(BUTTON_START|BUTTON_A)){gameState=STATE_PLAYING;clearPauseOverlay();}else if(pressed&BUTTON_B)returnToMainMenu();}
+ else if(gameState==STATE_MAIN_MENU){
+ if(menuDirection(pad,&direction)){
+  if((direction&BUTTON_UP)&&mainSelection>0)mainSelection--;
+  else if((direction&BUTTON_DOWN)&&mainSelection<2)mainSelection++;
+  drawMainMenu();
+ }
+ if((mainSelection==1)&&(pressed&(BUTTON_LEFT|BUTTON_RIGHT))){
+  cycleRunSpeed((pressed&BUTTON_LEFT)?-1:1);drawMainMenu();
+ }
+ if(pressed&(BUTTON_A|BUTTON_START)){
+  if(mainSelection==0){
+   playerResult=startGame();
+   if(playerResult!=YUNO_META_OK)showYunoMetaError(playerResult);
+  }
+  else if(mainSelection==1){cycleRunSpeed(1);drawMainMenu();}
+  else{gameState=STATE_SETTINGS;settingsSelection=0;navPrevious=0;navRepeat=0;drawSettings();}
+ }
+}
+ else if(gameState==STATE_SETTINGS){if(pressed&BUTTON_B){gameState=STATE_MAIN_MENU;mainSelection=0;navPrevious=0;navRepeat=0;drawMainMenu();}else{if(menuDirection(pad,&direction)){if((direction&BUTTON_UP)&&settingsSelection>0)settingsSelection--;else if((direction&BUTTON_DOWN)&&settingsSelection<2)settingsSelection++;drawSettings();}if((pressed&BUTTON_LEFT)&&settingsSelection==0){cycleRunButton(-1);drawSettings();}else if((pressed&BUTTON_RIGHT)&&settingsSelection==0){cycleRunButton(1);drawSettings();}else if(pressed&(BUTTON_A|BUTTON_START)){if(settingsSelection==0){cycleRunButton(1);drawSettings();}else if(settingsSelection==1){runButton=BUTTON_B;runSpeed=2;drawSettings();}else{gameState=STATE_MAIN_MENU;mainSelection=0;navPrevious=0;navRepeat=0;drawMainMenu();}}}}
+ else if(gameState==STATE_PLAYING){
+ if(pressed&BUTTON_START)openPhone();
+ else movePlayer(pad);
+ }
+ else if(gameState==STATE_PHONE_CONTACTS){
+  if(pressed&BUTTON_START)closePhone();
+  else if(pressed&BUTTON_X){gameState=STATE_PHONE_CHAT;drawPhoneChat();}
+  else if(pressed&(BUTTON_UP|BUTTON_DOWN))drawPhoneContacts();
+ }
+ else if(gameState==STATE_PHONE_CHAT){
+  if(pressed&BUTTON_START)closePhone();
+  else if(pressed&(BUTTON_B|BUTTON_C)){gameState=STATE_PHONE_CONTACTS;drawPhoneContacts();}
+ }
  if(spritesInitialized)
   SPR_update();
  SYS_doVBlankProcess();

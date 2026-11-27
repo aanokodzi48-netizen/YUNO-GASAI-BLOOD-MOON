@@ -14,8 +14,10 @@ A Mega Drive / Genesis game prototype built with SGDK.
 - No room image, wall, floor, furniture, clock, time-of-day system, GIF or intro animation.
 - Yuno is rendered as six separate hardware sprites assembled as one 40x120-pixel metasprite.
 - The six sprite parts use one shared 4-bit palette with transparent index 0 on PAL3.
-- Yuno moves freely in four directions with the D-pad; the RUN button increases movement speed.
-- START opens the pause menu; B returns to the main menu.
+- Yuno moves freely in four directions with the D-pad; holding the configured RUN button applies the selected run speed.
+- Run speed (2x, 3x or 4x) is selected in the main menu before starting. It cannot be changed during gameplay.
+- START opens the in-game flip-phone overlay. X opens the Yuki chat; B or C returns from chat to contacts; START closes the phone and resumes at the same player position.
+- The phone uses the full-screen WINDOW plane with high-priority text, and Yuno is hidden while it is open so the UI cannot be obscured.
 
 The original small `yuno` resource remains in `res/resources.res` for compatibility, but the playable scene uses `yuno_meta_*`. The new module owns and releases only its six sprite handles. It does not initialize, end, reset, or globally clear the shared Sprite Engine.
 
