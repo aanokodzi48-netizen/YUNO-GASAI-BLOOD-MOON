@@ -6,4 +6,3 @@ SPRITE yuno_meta_hair_right "yuno_idle_r2_c2.png" 1 4 NONE 0 NONE NONE FAST FALS
 SPRITE yuno_meta_body_lower "yuno_idle_r3_c1.png" 4 4 NONE 0 NONE NONE FAST FALSE
 SPRITE yuno_meta_legs "yuno_idle_r4_c1.png" 4 3 NONE 0 NONE NONE FAST FALSE
 SPRITE yuno_meta_shoe_right "yuno_idle_r4_c2.png" 1 3 NONE 0 NONE NONE FAST FALSE
-IMAGE phone_ui "phone_ui.png" BEST

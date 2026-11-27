@@ -1,30 +1,27 @@
-# YUNO GASAI: BLOOD MOON
+# ЮНО ГАСАЙ: КРОВАВАЯ ЛУНА
 
-A Mega Drive / Genesis game prototype built with SGDK.
+Игра для Sega Mega Drive / Genesis на SGDK.
 
-## Current flow
+## Главное меню и настройки
 
-1. Static title splash with PRESS START.
-2. Main menu with START and SETTINGS.
-3. START opens the plain white playfield with the six-part Yuno idle metasprite.
+- Заставка: «НАЖМИТЕ СТАРТ».
+- Главное меню: «СТАРТ» и «НАСТРОЙКИ».
+- Настройки: выбор кнопки бега, сброс и возврат.
+- Весь интерфейс меню и сообщения об ошибках отображаются русским пиксельным шрифтом.
 
-## Current playable test scene
+## Игровая сцена
 
-- Solid white background across the playfield.
-- No room image, wall, floor, furniture, clock, time-of-day system, GIF or intro animation.
-- Yuno is rendered as six separate hardware sprites assembled as one 40x120-pixel metasprite.
-- The six sprite parts use one shared 4-bit palette with transparent index 0 on PAL3.
-- Yuno moves freely in four directions with the D-pad; holding the configured RUN button applies the selected run speed.
-- Run speed (2x, 3x or 4x) is selected in the main menu before starting. It cannot be changed during gameplay.
-- START opens the in-game flip-phone overlay. X opens the Yuki chat; B or C returns from chat to contacts; START closes the phone and resumes at the same player position.
-- The phone uses the full-screen WINDOW plane with high-priority text, and Yuno is hidden while it is open so the UI cannot be obscured.
+- Однотонный светлый фон.
+- Юно собрана из шести аппаратных спрайтов в метаспрайт размером 40×120 пикселей.
+- Части используют общую 4-битную палитру PAL3 с прозрачным индексом 0.
+- Перемещение — крестовина.
+- Бег — удерживать выбранную кнопку (по умолчанию B). Скорость бега фиксирована на 2; выбора скорости нет.
+- START ставит игру на паузу, повторный START продолжает с прежней позиции.
 
-The original small `yuno` resource remains in `res/resources.res` for compatibility, but the playable scene uses `yuno_meta_*`. The new module owns and releases only its six sprite handles. It does not initialize, end, reset, or globally clear the shared Sprite Engine.
+## Ресурсы и сборка
 
-## Build and download
+Телефонный интерфейс полностью удалён: его изображение, ресурс, состояние, обработчики и валидатор удалены из сборки.
 
-GitHub Actions builds SGDK with the Marsdev toolchain. A successful run publishes the ROM, checksum and MD.emu ZIP as workflow artifacts.
+Старый ресурс `yuno` оставлен для совместимости; игровая сцена использует `yuno_meta_*`. Модуль метаспрайта освобождает только собственные шесть спрайтов и не перезапускает общий Sprite Engine.
 
-Expected ROM output: `out/rom.bin`.
-
-A successful build still needs an emulator play-test before it can be called tested.
+GitHub Actions собирает ROM через SGDK/Marsdev и публикует ROM, контрольную сумму и ZIP для MD.emu. После сборки требуется проверка запуска в эмуляторе.

@@ -1,14 +1,11 @@
 name: Build Mega Drive ROM
-
 on:
   push:
     branches: [ main ]
   pull_request:
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -16,12 +13,10 @@ jobs:
     steps:
       - name: Check out game source
         uses: actions/checkout@v4
-
       - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential git wget texinfo libgmp-dev libmpfr-dev libmpc-dev libisl-dev zlib1g-dev libzstd-dev flex bison libncurses-dev python3-pil fonts-dejavu-core
-
       - name: Build SGDK toolchain
         shell: bash
         run: |
@@ -39,15 +34,10 @@ jobs:
           cd "$RUNNER_TEMP/marsdev"
           make sgdk -j2
           sudo make install
-
-
       - name: Validate indexed assets
         run: python3 tools/validate_assets.py res/yuno.png res/title.png
       - name: Validate Yuno metasprite parts
         run: python3 tools/validate_yuno_assets.py res
-      - name: Validate phone UI image
-        run: python3 tools/validate_phone_ui.py res/phone_ui.png
-
       - name: Compile game ROM
         shell: bash
         run: |
@@ -58,12 +48,10 @@ jobs:
           cp out/rom.bin release/YUNO-GASAI-BLOOD-MOON.bin
           sha256sum release/YUNO-GASAI-BLOOD-MOON.bin | tee release/SHA256SUMS.txt
           stat -c 'ROM size: %s bytes' release/YUNO-GASAI-BLOOD-MOON.bin
-
       - name: Package MD.emu ZIP
         run: |
           cd release
           zip YUNO-GASAI-BLOOD-MOON-MDemu.zip YUNO-GASAI-BLOOD-MOON.bin SHA256SUMS.txt
-
       - name: Upload ROM and ZIP
         uses: actions/upload-artifact@v4
         with:
