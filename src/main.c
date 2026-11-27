@@ -59,6 +59,7 @@ static u8 introFrameTick = 0;
 static u8 introUploadFrame = 0;         /* frame being prepared */
 static u8 introUploadBuffer = 0;        /* hidden VRAM buffer: 0 or 1 */
 static u16 introUploadOffset = 0;
+static u16 introUploadTileCount = 0;
 static u16 introUploadBase = INTRO_BUFFER_A;
 static bool introUploadActive = FALSE;
 static bool introUploadReady = FALSE;
@@ -232,7 +233,11 @@ static bool validateIntroResources(void)
 {
     u16 i;
 
-    if (introFrames[0]->tileset->numTile != INTRO_TILE_COUNT)
+    /* SGDK removes duplicate 8x8 tiles from IMAGE resources. Therefore
+       numTile can be smaller than the full 26x18 tilemap. The VRAM buffers
+       reserve the maximum size, but uploads must use each frame's real count. */
+    if ((introFrames[0]->tileset->numTile == 0) ||
+        (introFrames[0]->tileset->numTile > INTRO_TILE_COUNT))
         return FALSE;
 
     if ((INTRO_BUFFER_B + INTRO_TILE_COUNT) > (TILE_USER_MAX_INDEX + 1))
@@ -240,7 +245,8 @@ static bool validateIntroResources(void)
 
     for (i = 0; i < INTRO_FRAME_COUNT; i++)
     {
-        if (introFrames[i]->tileset->numTile != INTRO_TILE_COUNT)
+        if ((introFrames[i]->tileset->numTile == 0) ||
+            (introFrames[i]->tileset->numTile > INTRO_TILE_COUNT))
             return FALSE;
     }
 
@@ -253,6 +259,7 @@ static void beginIntroUpload(u8 frame, u8 buffer)
     introUploadBuffer = buffer;
     introUploadBase = introBufferBase(buffer);
     introUploadOffset = 0;
+    introUploadTileCount = introFrames[frame]->tileset->numTile;
     introUploadActive = TRUE;
     introUploadReady = FALSE;
 }
@@ -266,7 +273,7 @@ static void queueIntroUploadChunk(void)
     if (!introUploadActive || introMapPending || introUploadReady)
         return;
 
-    remaining = INTRO_TILE_COUNT - introUploadOffset;
+    remaining = introUploadTileCount - introUploadOffset;
     count = (remaining > INTRO_CHUNK_TILES) ? INTRO_CHUNK_TILES : remaining;
 
     VDP_loadTileData(
@@ -320,7 +327,7 @@ static void leaveIntro(void)
 /* Called immediately after SYS_doVBlankProcess: all queued writes have landed. */
 static void completeIntroVBlank(void)
 {
-    if (introUploadActive && (introUploadOffset >= INTRO_TILE_COUNT))
+    if (introUploadActive && (introUploadOffset >= introUploadTileCount))
     {
         introUploadActive = FALSE;
         introUploadReady = TRUE;
