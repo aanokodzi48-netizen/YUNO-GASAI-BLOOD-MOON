@@ -53,7 +53,7 @@ static u16 decodeRussianCodepoint(const u8 **cursor){
 static s16 russianGlyph(u16 cp){
  if((cp>=0x0410u)&&(cp<=0x042Fu))return (s16)(cp-0x0410u);
  if(cp==0x0401u)return 32;
- if(cp=='>')return 33;if(cp==':')return 34;if(cp=='-')return 35;if(cp=='.')return 36;
+ if(cp=='>')return 33;if(cp==':')return 34;if(cp=='-')return 35;if(cp=='.')return 36;\n if(cp=='A')return 0;if(cp=='B')return 2;if(cp=='C')return 17;
  return -1;
 }
 static u16 russianTextLength(const char*text){
@@ -89,7 +89,7 @@ static void enterMainMenuFromSplash(void){gameState=STATE_MAIN_MENU;mainSelectio
 static void cycleRunButton(s16 d){if(runButton==BUTTON_A)runButton=(d>0)?BUTTON_B:BUTTON_C;else if(runButton==BUTTON_B)runButton=(d>0)?BUTTON_C:BUTTON_A;else runButton=(d>0)?BUTTON_A:BUTTON_B;}
 static char getButtonLetter(u16 b){if(b==BUTTON_A)return 'A';if(b==BUTTON_B)return 'B';return 'C';}
 static void drawSettings(void){
- char line[24];clearMenuText();drawCenteredRussian("НАСТРОЙКИ",18,FALSE);
+ char line[32];clearMenuText();drawCenteredRussian("НАСТРОЙКИ",18,FALSE);
  sprintf(line,"КНОПКА БЕГА: %c",getButtonLetter(runButton));drawCenteredRussian(line,22,settingsSelection==0);
  drawCenteredRussian(settingsSelection==1?"> СБРОС НАСТРОЕК":"СБРОС НАСТРОЕК",24,settingsSelection==1);
  drawCenteredRussian(settingsSelection==2?"> НАЗАД":"НАЗАД",26,settingsSelection==2);
@@ -167,11 +167,11 @@ int main(bool hardReset){
    }
   }
   else if(gameState==STATE_PLAYING){
-   if(pressed&BUTTON_START){gameState=STATE_PAUSE;clearMenuText();drawCenteredRussian("ПАУЗА",22,TRUE);drawCenteredRussian("СТАРТ - ПРОДОЛЖИТЬ",25,FALSE);}
+   if(pressed&BUTTON_START){gameState=STATE_PAUSE;YunoMeta_setVisible(FALSE);clearMenuText();drawCenteredRussian("ПАУЗА",22,TRUE);drawCenteredRussian("СТАРТ - ПРОДОЛЖИТЬ",25,FALSE);}
    else movePlayer(pad);
   }
   else if(gameState==STATE_PAUSE){
-   if(pressed&BUTTON_START){gameState=STATE_PLAYING;YunoMeta_setVisible(TRUE);}
+   if(pressed&BUTTON_START){gameState=STATE_PLAYING;VDP_clearPlane(BG_A,TRUE);YunoMeta_setVisible(TRUE);}
   }
   if(spritesInitialized)SPR_update();
   SYS_doVBlankProcess();
