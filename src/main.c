@@ -11,9 +11,10 @@ typedef enum { STATE_SPLASH, STATE_MAIN_MENU, STATE_SETTINGS, STATE_PLAYING, STA
 #define PHONE_IMAGE_Y_TILE 2
 static bool spritesInitialized=FALSE;
 static s16 playerX=140,playerY=52; static u16 oldPad=0,runButton=BUTTON_B;
-static u8 runSpeed=2;
+static u16 runSpeed=2;
 static u16 phonePreviousPalette[16];
 static bool phonePaletteSaved=FALSE;
+static u8 phoneContactSelection=0;
 static u8 mainSelection=0,settingsSelection=0,navRepeat=0; static u16 navPrevious=0;
 static GameState gameState=STATE_SPLASH;
 static const u16 goldPalette[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,RGB24_TO_VDPCOLOR(0xFFD84D)};
@@ -48,8 +49,8 @@ static void enterMainMenuFromSplash(void){gameState=STATE_MAIN_MENU;mainSelectio
 static void cycleRunButton(s16 d){if(runButton==BUTTON_A)runButton=(d>0)?BUTTON_B:BUTTON_C;else if(runButton==BUTTON_B)runButton=(d>0)?BUTTON_C:BUTTON_A;else runButton=(d>0)?BUTTON_A:BUTTON_B;}
 static char getButtonLetter(u16 b){if(b==BUTTON_A)return 'A';if(b==BUTTON_B)return 'B';return 'C';}
 static void cycleRunSpeed(s16 direction){
- if(direction>0) runSpeed=(runSpeed>=4)?2:(u8)(runSpeed+1);
- else runSpeed=(runSpeed<=2)?4:(u8)(runSpeed-1);
+ if(direction>0) runSpeed=(runSpeed>=4)?2:(u16)(runSpeed+1);
+ else runSpeed=(runSpeed<=2)?4:(u16)(runSpeed-1);
 }
 static void drawSettings(void){char line[32];clearTitleText();drawLine("SETTINGS",16,18,FALSE);sprintf(line,"%c RUN BUTTON: %c",settingsSelection==0?'>':' ',getButtonLetter(runButton));drawLine(line,12,21,settingsSelection==0);drawLine(settingsSelection==1?"> RESET DEFAULT":"  RESET DEFAULT",12,23,settingsSelection==1);drawLine(settingsSelection==2?"> BACK":"  BACK",17,25,settingsSelection==2);drawLine("A/START: SELECT  B: BACK",8,26,FALSE);drawLine("LEFT/RIGHT: CHANGE",11,27,FALSE);VDP_setTextPalette(PAL2);}
 static bool menuDirection(u16 pad,u16*direction){u16 cur=pad&(BUTTON_UP|BUTTON_DOWN);if(!cur){navPrevious=0;navRepeat=0;return FALSE;}if(cur!=navPrevious){navPrevious=cur;navRepeat=0;*direction=cur;return TRUE;}if(navRepeat<12){navRepeat++;return FALSE;}navRepeat=7;*direction=cur;return TRUE;}
@@ -127,8 +128,9 @@ static void closePhone(void){
 static void drawPhoneContacts(void){
  if(!drawPhoneFrame()){closePhone();return;}
  VDP_drawText("PHONE",18,5);
- VDP_drawText(">YUKI",18,8);
- VDP_drawText("X OPEN",18,10);
+ VDP_drawText(phoneContactSelection==0?">YUKI":" YUKI",18,8);
+ VDP_drawText(phoneContactSelection==1?">NONE":" NONE",18,10);
+ VDP_drawText("X/A OPEN",14,26);
  VDP_drawText("START CLOSE",14,27);
 }
 
@@ -137,8 +139,8 @@ static void drawPhoneChat(void){
  VDP_drawText("YUKI",18,5);
  VDP_drawText("CHAT",18,8);
  /* Intentionally empty: no messages are created in this version. */
- VDP_drawText("B/C",18,10);
- VDP_drawText("BACK",18,11);
+ VDP_drawText("B/C",18,9);
+ VDP_drawText("BACK",18,10);
  VDP_drawText("START CLOSE",14,27);
 }
 
@@ -148,6 +150,7 @@ static void openPhone(void){
   phonePaletteSaved=TRUE;
  }
  gameState=STATE_PHONE_CONTACTS;
+ phoneContactSelection=0;
  YunoMeta_setVisible(FALSE);
  drawPhoneContacts();
 }
@@ -190,6 +193,12 @@ int main(bool hardReset){
  /* Recover only Yuno-owned objects after a warm/soft reset. */
  YunoMeta_destroy();
  spritesInitialized=SPR_isInitialized();
+ /* Reset the VDP Window overlay too, in case the warm reset happened in the phone. */
+ VDP_setWindowOff();
+ VDP_setTextPlane(BG_A);
+ VDP_setTextPriority(FALSE);
+ phonePaletteSaved=FALSE;
+ phoneContactSelection=0;
  gameState=STATE_SPLASH;playerX=140;playerY=52;mainSelection=0;settingsSelection=0;navPrevious=0;navRepeat=0;
  VDP_setEnable(FALSE);VDP_setBackgroundColor(0);VDP_setTextPlane(BG_A);JOY_reset();JOY_update();oldPad=JOY_readJoypad(JOY_1);drawSplash();
  while(1){pad=JOY_readJoypad(JOY_1);pressed=pad&(u16)~oldPad;oldPad=pad;
@@ -219,12 +228,12 @@ int main(bool hardReset){
  }
  else if(gameState==STATE_PHONE_CONTACTS){
   if(pressed&BUTTON_START)closePhone();
-  else if(pressed&BUTTON_X){gameState=STATE_PHONE_CHAT;drawPhoneChat();}
-  else if(pressed&(BUTTON_UP|BUTTON_DOWN))drawPhoneContacts();
+  else if(pressed&(BUTTON_UP|BUTTON_DOWN)){phoneContactSelection^=1;drawPhoneContacts();}
+  else if((pressed&(BUTTON_X|BUTTON_A))&&(phoneContactSelection==0)){gameState=STATE_PHONE_CHAT;drawPhoneChat();}
  }
  else if(gameState==STATE_PHONE_CHAT){
   if(pressed&BUTTON_START)closePhone();
-  else if(pressed&(BUTTON_B|BUTTON_C)){gameState=STATE_PHONE_CONTACTS;drawPhoneContacts();}
+  else if(pressed&(BUTTON_B|BUTTON_C)){phoneContactSelection=0;gameState=STATE_PHONE_CONTACTS;drawPhoneContacts();}
  }
  if(spritesInitialized)
   SPR_update();
