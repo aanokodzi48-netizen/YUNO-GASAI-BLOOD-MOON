@@ -50,15 +50,25 @@ static void movePlayer(u16 pad){
  if(ny!=playerY&&!playerBlockedAt(playerX,ny))playerY=ny;
  YunoMeta_draw(playerX,playerY);
 }
-static bool startGame(void){
+static YunoMetaResult startGame(void){
  YunoMetaResult result;
  VDP_setEnable(FALSE);DMA_clearQueue();
- if(!spritesInitialized){SPR_initEx(SPRITE_VRAM_TILES);spritesInitialized=TRUE;}
+
+ /* SPR_initEx() internally calls SPR_end(). Never call it on a live engine. */
+ if(!SPR_isInitialized())
+  SPR_initEx(SPRITE_VRAM_TILES);
+ spritesInitialized=SPR_isInitialized();
+ if(!spritesInitialized){
+  VDP_setEnable(TRUE);
+  return YUNO_META_ERR_ENGINE_NOT_INITIALIZED;
+ }
+
  drawBlankPlayfield();playerX=140;playerY=52;
  result=YunoMeta_create(playerX,playerY);
- if(result!=YUNO_META_OK){VDP_setEnable(TRUE);return FALSE;}
+ if(result!=YUNO_META_OK){VDP_setEnable(TRUE);return result;}
  YunoMeta_setVisible(TRUE);
- SPR_update();VDP_waitDMACompletion();VDP_setEnable(TRUE);gameState=STATE_PLAYING;return TRUE;
+ SPR_update();VDP_waitDMACompletion();VDP_setEnable(TRUE);gameState=STATE_PLAYING;
+ return YUNO_META_OK;
 }
 static void clearPauseOverlay(void){VDP_clearTextArea(10,2,20,7);}
 static void drawPause(void){
@@ -71,17 +81,55 @@ static void drawPause(void){
 static void returnToMainMenu(void){
  /* Release only Yuno's six objects. Keep the shared Sprite Engine alive. */
  YunoMeta_destroy();
+ spritesInitialized=SPR_isInitialized();
  gameState=STATE_MAIN_MENU;mainSelection=0;navPrevious=0;navRepeat=0;
  if(!drawTitleBackground())
   showFatalError("TITLE IMAGE ERROR");
  drawMainMenu();
 }
+static const char *getYunoMetaErrorText(YunoMetaResult result){
+ switch(result){
+  case YUNO_META_ERR_ALREADY_CREATED:return "ALREADY EXISTS";
+  case YUNO_META_ERR_ENGINE_NOT_INITIALIZED:return "ENGINE NOT READY";
+  case YUNO_META_ERR_RESOURCE_DEFINITION:return "BAD SPRITE RESOURCE";
+  case YUNO_META_ERR_PALETTE_MISMATCH:return "PALETTE MISMATCH";
+  case YUNO_META_ERR_UNSUPPORTED_SCREEN_WIDTH:return "BAD SCREEN WIDTH";
+  case YUNO_META_ERR_HARDWARE_LIMIT:return "SPRITE LIMIT";
+  case YUNO_META_ERR_HARDWARE_COST_MISMATCH:return "SPRITE COST";
+  case YUNO_META_ERR_POSITION_RANGE:return "BAD POSITION";
+  case YUNO_META_ERR_ALLOCATION:return "NO SPRITE MEMORY";
+  default:return "UNKNOWN ERROR";
+ }
+}
+static void showYunoMetaError(YunoMetaResult result){
+ char codeLine[24];
+ u16 pad,previous;
+ VDP_setEnable(TRUE);VDP_clearPlane(BG_A,TRUE);VDP_clearPlane(BG_B,TRUE);
+ VDP_setTextPlane(BG_A);VDP_setTextPalette(PAL1);
+ VDP_drawText("YUNO CREATE FAILED",10,10);
+ VDP_drawText(getYunoMetaErrorText(result),10,13);
+ sprintf(codeLine,"ERROR CODE: %u",(u16)result);VDP_drawText(codeLine,10,15);
+ VDP_drawText("RELEASE START, THEN PRESS",7,19);
+ VDP_drawText("START TO RETURN TO MENU",8,21);
+ previous=JOY_readJoypad(JOY_1);
+ while(previous&BUTTON_START){SYS_doVBlankProcess();previous=JOY_readJoypad(JOY_1);}
+ while(1){
+  SYS_doVBlankProcess();pad=JOY_readJoypad(JOY_1);
+  if((pad&BUTTON_START)&&!(previous&BUTTON_START))break;
+  previous=pad;
+ }
+ gameState=STATE_MAIN_MENU;mainSelection=0;drawMainMenu();
+}
 int main(bool hardReset){
- u16 pad,pressed,direction=0;(void)hardReset;gameState=STATE_SPLASH;spritesInitialized=FALSE;playerX=140;playerY=52;mainSelection=0;settingsSelection=0;navPrevious=0;navRepeat=0;
+ u16 pad,pressed,direction=0;YunoMetaResult playerResult;(void)hardReset;
+ /* Recover only Yuno-owned objects after a warm/soft reset. */
+ YunoMeta_destroy();
+ spritesInitialized=SPR_isInitialized();
+ gameState=STATE_SPLASH;playerX=140;playerY=52;mainSelection=0;settingsSelection=0;navPrevious=0;navRepeat=0;
  VDP_setEnable(FALSE);VDP_setBackgroundColor(0);VDP_setTextPlane(BG_A);JOY_reset();JOY_update();oldPad=JOY_readJoypad(JOY_1);drawSplash();
  while(1){pad=JOY_readJoypad(JOY_1);pressed=pad&(u16)~oldPad;oldPad=pad;
  if(gameState==STATE_SPLASH){if(pressed&(BUTTON_START|BUTTON_A))enterMainMenuFromSplash();}
- else if(gameState==STATE_MAIN_MENU){if(menuDirection(pad,&direction)){if(direction&BUTTON_UP)mainSelection=0;else if(direction&BUTTON_DOWN)mainSelection=1;drawMainMenu();}if(pressed&(BUTTON_A|BUTTON_START)){if(mainSelection==0){if(!startGame())showFatalError("PLAYER SPRITE ERROR");}else{gameState=STATE_SETTINGS;settingsSelection=0;navPrevious=0;navRepeat=0;drawSettings();}}}
+ else if(gameState==STATE_MAIN_MENU){if(menuDirection(pad,&direction)){if(direction&BUTTON_UP)mainSelection=0;else if(direction&BUTTON_DOWN)mainSelection=1;drawMainMenu();}if(pressed&(BUTTON_A|BUTTON_START)){if(mainSelection==0){playerResult=startGame();if(playerResult!=YUNO_META_OK)showYunoMetaError(playerResult);}else{gameState=STATE_SETTINGS;settingsSelection=0;navPrevious=0;navRepeat=0;drawSettings();}}}
  else if(gameState==STATE_SETTINGS){if(pressed&BUTTON_B){gameState=STATE_MAIN_MENU;mainSelection=0;navPrevious=0;navRepeat=0;drawMainMenu();}else{if(menuDirection(pad,&direction)){if((direction&BUTTON_UP)&&settingsSelection>0)settingsSelection--;else if((direction&BUTTON_DOWN)&&settingsSelection<2)settingsSelection++;drawSettings();}if((pressed&BUTTON_LEFT)&&settingsSelection==0){cycleRunButton(-1);drawSettings();}else if((pressed&BUTTON_RIGHT)&&settingsSelection==0){cycleRunButton(1);drawSettings();}else if(pressed&(BUTTON_A|BUTTON_START)){if(settingsSelection==0){cycleRunButton(1);drawSettings();}else if(settingsSelection==1){runButton=BUTTON_B;drawSettings();}else{gameState=STATE_MAIN_MENU;mainSelection=0;navPrevious=0;navRepeat=0;drawMainMenu();}}}}
  else if(gameState==STATE_PLAYING){if(pressed&BUTTON_START){gameState=STATE_PAUSED;drawPause();}else movePlayer(pad);}
  else if(gameState==STATE_PAUSED){if(pressed&(BUTTON_START|BUTTON_A)){gameState=STATE_PLAYING;clearPauseOverlay();}else if(pressed&BUTTON_B)returnToMainMenu();}
