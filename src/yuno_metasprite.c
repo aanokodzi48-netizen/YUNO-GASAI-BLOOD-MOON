@@ -113,12 +113,21 @@ static YunoMetaResult yunoMetaValidateResources(void)
 static void yunoMetaReleaseOwnedParts(void)
 {
     u16 partIndex;
+    const bool engineReady = SPR_isInitialized();
 
+    /*
+     * A console/emulator soft reset can re-enter main() without clearing WRAM.
+     * If SGDK's Sprite Engine survived, release only the handles owned here.
+     * If the engine was already reset/ended, discard stale handles without
+     * passing them to SPR_releaseSprite().
+     */
     for (partIndex = 0u; partIndex < YUNO_META_PART_COUNT; partIndex++)
     {
         if (yunoMetaSprites[partIndex] != NULL)
         {
-            SPR_releaseSprite(yunoMetaSprites[partIndex]);
+            if (engineReady)
+                SPR_releaseSprite(yunoMetaSprites[partIndex]);
+
             yunoMetaSprites[partIndex] = NULL;
         }
     }
