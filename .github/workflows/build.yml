@@ -40,7 +40,6 @@ jobs:
           make sgdk -j2
           sudo make install
 
-      - name: Convert uploaded intro GIF frames
 
       - name: Validate indexed assets
         run: python3 tools/validate_assets.py res/yuno.png res/title.png
