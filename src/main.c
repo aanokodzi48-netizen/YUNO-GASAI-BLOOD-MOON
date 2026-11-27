@@ -14,7 +14,6 @@ static s16 playerX=140,playerY=52; static u16 oldPad=0,runButton=BUTTON_B;
 static u16 runSpeed=2;
 static u16 phonePreviousPalette[16];
 static bool phonePaletteSaved=FALSE;
-static u8 phoneContactSelection=0;
 static u8 mainSelection=0,settingsSelection=0,navRepeat=0; static u16 navPrevious=0;
 static GameState gameState=STATE_SPLASH;
 static const u16 goldPalette[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,RGB24_TO_VDPCOLOR(0xFFD84D)};
@@ -128,10 +127,10 @@ static void closePhone(void){
 
 static void drawPhoneContacts(void){
  if(!drawPhoneFrame()){closePhone();return;}
- VDP_drawText("PHONE",18,5);
- VDP_drawText(phoneContactSelection==0?">YUKI":">NONE",18,7);
- VDP_drawText(phoneContactSelection==0?"X/A GO":"EMPTY",17,8);
- VDP_drawText("START",18,9);
+ VDP_drawText("CONTACTS",17,5);
+ VDP_drawText("> YUKI",18,7);
+ VDP_drawText("X / A: OPEN",16,9);
+ VDP_drawText("START: CLOSE",15,11);
 }
 
 static void drawPhoneChat(void){
@@ -149,7 +148,7 @@ static void openPhone(void){
   phonePaletteSaved=TRUE;
  }
  gameState=STATE_PHONE_CONTACTS;
- phoneContactSelection=0;
+ 
  YunoMeta_setVisible(FALSE);
  drawPhoneContacts();
 }
@@ -197,7 +196,7 @@ int main(bool hardReset){
  VDP_setTextPlane(BG_A);
  VDP_setTextPriority(FALSE);
  phonePaletteSaved=FALSE;
- phoneContactSelection=0;
+ 
  gameState=STATE_SPLASH;playerX=140;playerY=52;mainSelection=0;settingsSelection=0;navPrevious=0;navRepeat=0;
  VDP_setEnable(FALSE);VDP_setBackgroundColor(0);VDP_setTextPlane(BG_A);JOY_reset();JOY_update();oldPad=JOY_readJoypad(JOY_1);drawSplash();
  while(1){pad=JOY_readJoypad(JOY_1);pressed=pad&(u16)~oldPad;oldPad=pad;
@@ -227,12 +226,11 @@ int main(bool hardReset){
  }
  else if(gameState==STATE_PHONE_CONTACTS){
   if(pressed&BUTTON_START)closePhone();
-  else if(pressed&(BUTTON_UP|BUTTON_DOWN)){phoneContactSelection^=1;drawPhoneContacts();}
-  else if((pressed&(BUTTON_X|BUTTON_A))&&(phoneContactSelection==0)){gameState=STATE_PHONE_CHAT;drawPhoneChat();}
+  else if(pressed&(BUTTON_X|BUTTON_A)){gameState=STATE_PHONE_CHAT;drawPhoneChat();}
  }
  else if(gameState==STATE_PHONE_CHAT){
   if(pressed&BUTTON_START)closePhone();
-  else if(pressed&(BUTTON_B|BUTTON_C)){phoneContactSelection=0;gameState=STATE_PHONE_CONTACTS;drawPhoneContacts();}
+  else if(pressed&(BUTTON_B|BUTTON_C)){gameState=STATE_PHONE_CONTACTS;drawPhoneContacts();}
  }
  if(spritesInitialized)
   SPR_update();
