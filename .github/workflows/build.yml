@@ -43,6 +43,8 @@ jobs:
 
       - name: Validate indexed assets
         run: python3 tools/validate_assets.py res/yuno.png res/title.png
+      - name: Validate Yuno metasprite parts
+        run: python3 tools/validate_yuno_assets.py res
 
       - name: Compile game ROM
         shell: bash

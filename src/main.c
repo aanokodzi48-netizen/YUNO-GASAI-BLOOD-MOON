@@ -1,13 +1,14 @@
 #include <genesis.h>
 #include "resources.h"
+#include "yuno_metasprite.h"
 #define PLAYER_MIN_X 0
-#define PLAYER_MAX_X 288
+#define PLAYER_MAX_X 280
 #define PLAYER_MIN_Y 0
-#define PLAYER_MAX_Y 192
+#define PLAYER_MAX_Y 104
 #define SPRITE_VRAM_TILES 128
 typedef enum { STATE_SPLASH, STATE_MAIN_MENU, STATE_SETTINGS, STATE_PLAYING, STATE_PAUSED } GameState;
-static Sprite *yunoSprite=NULL; static bool spritesInitialized=FALSE;
-static s16 playerX=144,playerY=96; static u16 animClock=0,oldPad=0,runButton=BUTTON_B;
+static bool spritesInitialized=FALSE;
+static s16 playerX=140,playerY=52; static u16 oldPad=0,runButton=BUTTON_B;
 static u8 mainSelection=0,settingsSelection=0,navRepeat=0; static u16 navPrevious=0;
 static GameState gameState=STATE_SPLASH;
 static const u16 goldPalette[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,RGB24_TO_VDPCOLOR(0xFFD84D)};
@@ -41,14 +42,23 @@ static void drawBlankPlayfield(void){
  VDP_setTextPlane(BG_A);VDP_setTextPalette(PAL1);
 }
 static bool playerBlockedAt(s16 x,s16 y){return x<PLAYER_MIN_X||x>PLAYER_MAX_X||y<PLAYER_MIN_Y||y>PLAYER_MAX_Y;}
-static void movePlayer(u16 pad){s16 speed=(pad&runButton)?2:1,nx=playerX,ny=playerY;if(pad&BUTTON_LEFT)nx-=speed;else if(pad&BUTTON_RIGHT)nx+=speed;if(nx!=playerX&&!playerBlockedAt(nx,playerY))playerX=nx;if(pad&BUTTON_UP)ny-=speed;else if(pad&BUTTON_DOWN)ny+=speed;if(ny!=playerY&&!playerBlockedAt(playerX,ny))playerY=ny;if(pad&(BUTTON_LEFT|BUTTON_RIGHT|BUTTON_UP|BUTTON_DOWN))animClock++;else animClock=0;SPR_setAnimAndFrame(yunoSprite,1,(animClock>>3)&3);SPR_setPosition(yunoSprite,playerX,playerY);}
+static void movePlayer(u16 pad){
+ s16 speed=(pad&runButton)?2:1,nx=playerX,ny=playerY;
+ if(pad&BUTTON_LEFT)nx-=speed;else if(pad&BUTTON_RIGHT)nx+=speed;
+ if(nx!=playerX&&!playerBlockedAt(nx,playerY))playerX=nx;
+ if(pad&BUTTON_UP)ny-=speed;else if(pad&BUTTON_DOWN)ny+=speed;
+ if(ny!=playerY&&!playerBlockedAt(playerX,ny))playerY=ny;
+ YunoMeta_draw(playerX,playerY);
+}
 static bool startGame(void){
+ YunoMetaResult result;
  VDP_setEnable(FALSE);DMA_clearQueue();
  if(!spritesInitialized){SPR_initEx(SPRITE_VRAM_TILES);spritesInitialized=TRUE;}
- drawBlankPlayfield();playerX=144;playerY=96;animClock=0;
- yunoSprite=SPR_addSprite(&yuno,playerX,playerY,TILE_ATTR(PAL2,TRUE,FALSE,FALSE));
- if(!yunoSprite){SPR_end();spritesInitialized=FALSE;VDP_setEnable(TRUE);return FALSE;}
- PAL_setPalette(PAL2,yuno.palette->data,CPU);SPR_setVisibility(yunoSprite,VISIBLE);SPR_update();VDP_waitDMACompletion();VDP_setEnable(TRUE);gameState=STATE_PLAYING;return TRUE;
+ drawBlankPlayfield();playerX=140;playerY=52;
+ result=YunoMeta_create(playerX,playerY);
+ if(result!=YUNO_META_OK){VDP_setEnable(TRUE);return FALSE;}
+ YunoMeta_setVisible(TRUE);
+ SPR_update();VDP_waitDMACompletion();VDP_setEnable(TRUE);gameState=STATE_PLAYING;return TRUE;
 }
 static void clearPauseOverlay(void){VDP_clearTextArea(10,2,20,7);}
 static void drawPause(void){
@@ -58,9 +68,14 @@ static void drawPause(void){
  VDP_drawText("START: RESUME",14,5);
  VDP_drawText("B: MAIN MENU",15,7);
 }
-static void returnToMainMenu(void){if(spritesInitialized){SPR_end();spritesInitialized=FALSE;}yunoSprite=NULL;gameState=STATE_MAIN_MENU;mainSelection=0;navPrevious=0;navRepeat=0;if(!drawTitleBackground())showFatalError("TITLE IMAGE ERROR");drawMainMenu();}
+static void returnToMainMenu(void){
+ /* Release only Yuno's six objects. Keep the shared Sprite Engine alive. */
+ YunoMeta_destroy();
+ gameState=STATE_MAIN_MENU;mainSelection=0;navPrevious=0;navRepeat=0;
+ if(!drawTitleBackground())showFatalError("TITLE IMAGE ERROR");drawMainMenu();
+}
 int main(bool hardReset){
- u16 pad,pressed,direction=0;(void)hardReset;gameState=STATE_SPLASH;spritesInitialized=FALSE;yunoSprite=NULL;playerX=144;playerY=96;animClock=0;mainSelection=0;settingsSelection=0;navPrevious=0;navRepeat=0;
+ u16 pad,pressed,direction=0;(void)hardReset;gameState=STATE_SPLASH;spritesInitialized=FALSE;playerX=140;playerY=52;mainSelection=0;settingsSelection=0;navPrevious=0;navRepeat=0;
  VDP_setEnable(FALSE);VDP_setBackgroundColor(0);VDP_setTextPlane(BG_A);JOY_reset();JOY_update();oldPad=JOY_readJoypad(JOY_1);drawSplash();
  while(1){pad=JOY_readJoypad(JOY_1);pressed=pad&(u16)~oldPad;oldPad=pad;
  if(gameState==STATE_SPLASH){if(pressed&(BUTTON_START|BUTTON_A))enterMainMenuFromSplash();}
