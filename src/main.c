@@ -5,7 +5,7 @@
 #define PLAYER_MIN_X 0
 #define PLAYER_MIN_Y 0
 #define PLAYER_MAX_Y 104
-#define PLAYER_SPEED 2
+#define PLAYER_STEP 2
 #define SPRITE_VRAM_TILES 128
 #define RU_GLYPH_COUNT 51
 #define PHONE_TILE_BASE TILE_USER_INDEX
@@ -332,11 +332,11 @@ static bool playerBlockedAt(s16 x,s16 y)
 static void movePlayer(u16 pad)
 {
     s16 nx=playerX,ny=playerY;
-    if(pad&BUTTON_LEFT)nx-=PLAYER_SPEED;
-    else if(pad&BUTTON_RIGHT)nx+=PLAYER_SPEED;
+    if(pad&BUTTON_LEFT)nx-=PLAYER_STEP;
+    else if(pad&BUTTON_RIGHT)nx+=PLAYER_STEP;
     if(nx!=playerX && !playerBlockedAt(nx,playerY))playerX=nx;
-    if(pad&BUTTON_UP)ny-=PLAYER_SPEED;
-    else if(pad&BUTTON_DOWN)ny+=PLAYER_SPEED;
+    if(pad&BUTTON_UP)ny-=PLAYER_STEP;
+    else if(pad&BUTTON_DOWN)ny+=PLAYER_STEP;
     if(ny!=playerY && !playerBlockedAt(playerX,ny))playerY=ny;
     YunoMeta_draw(playerX,playerY);
 }
@@ -508,7 +508,7 @@ static void drawPhoneChat(void)
     drawRussianText("ЧАТ: ЮКИ",(u16)(px+6),(u16)(py+3),FALSE);
     drawRussianText("СООБЩЕНИЙ НЕТ",(u16)(px+3),(u16)(py+6),FALSE);
     drawRussianText("C: НАЗАД",(u16)(px+4),(u16)(py+9),FALSE);
-    drawRussianText("START: ВЫХОД",(u16)(px+4),(u16)(py+10),FALSE);
+    drawRussianText("СТАРТ: ВЫХОД",(u16)(px+4),(u16)(py+10),FALSE);
 }
 
 static void closePhone(void)
