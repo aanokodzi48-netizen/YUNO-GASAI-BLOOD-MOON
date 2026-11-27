@@ -20,6 +20,7 @@
 #define UI_TILE_BOTTOM_LEFT 8
 #define UI_TILE_BOTTOM_RIGHT 9
 #define UI_GLYPH_BASE 10
+#define FRAMES_PER_GAME_MINUTE 120
 
 typedef enum
 {
@@ -79,6 +80,7 @@ static u8 clockMinute = 45;
 static u16 messageTimer = 0;
 static u16 sleepTimer = 0;
 static u8 lastPrompt = 255;
+static u16 minuteFrameCounter = 0;
 
 static const u16 goldPalette[16] = {
     0x000,0x000,0x000,0x000,0x000,0x000,0x000,0x000,
@@ -355,7 +357,7 @@ static bool drawMorningWindow(void)
     VDP_clearTileMapRect(BG_A, WINDOW_TILE_X, WINDOW_TILE_Y,
                          WINDOW_TILE_W, WINDOW_TILE_H);
 
-    if (!isMorning)
+    if (!(clockHour >= 7 && clockHour < 18))
         return TRUE;
 
     return VDP_setTileMapEx(BG_A, window_morning.tilemap,
@@ -369,7 +371,9 @@ static void updateRoomLighting(void)
     /* The whole room responds to the lamp/time of day through PAL3. This is
        instantaneous and does not reload the room tiles, avoiding the old
        purple/blank-frame glitch during interaction. */
-    if (isMorning)
+    bool daytime = (clockHour >= 7 && clockHour < 18);
+
+    if (daytime)
         PAL_setPalette(PAL3, roomDayPalette, CPU);
     else if (lampOn)
         PAL_setPalette(PAL3, roomLampPalette, CPU);
@@ -378,20 +382,16 @@ static void updateRoomLighting(void)
 
     if (lampGlowSprite != NULL)
         SPR_setVisibility(lampGlowSprite,
-                          (lampOn && !isMorning) ? VISIBLE : HIDDEN);
+                          (lampOn && !daytime) ? VISIBLE : HIDDEN);
 }
 
 static void updateSkySprite(void)
 {
     if (skyFxSprite != NULL)
     {
-        if (isMorning)
-            SPR_setVisibility(skyFxSprite, HIDDEN);
-        else
-        {
-            SPR_setAnimAndFrame(skyFxSprite, 0, 0);
-            SPR_setVisibility(skyFxSprite, VISIBLE);
-        }
+        SPR_setAnimAndFrame(skyFxSprite, 0,
+                            (clockHour >= 7 && clockHour < 18) ? 1 : 0);
+        SPR_setVisibility(skyFxSprite, VISIBLE);
     }
 }
 
@@ -604,6 +604,40 @@ static void drawClockPanel(void)
     drawUiText(line, 26 + ((13 - length) / 2), 2);
 }
 
+static void updateGameClock(void)
+{
+    bool wasDaytime = (clockHour >= 7 && clockHour < 18);
+    bool isDaytime;
+
+    minuteFrameCounter++;
+    if (minuteFrameCounter < FRAMES_PER_GAME_MINUTE)
+        return;
+
+    minuteFrameCounter = 0;
+    clockMinute++;
+    if (clockMinute >= 60)
+    {
+        clockMinute = 0;
+        clockHour++;
+        if (clockHour >= 24)
+            clockHour = 0;
+    }
+
+    isMorning = (clockHour >= 7 && clockHour < 18);
+    isDaytime = isMorning;
+
+    /* Refresh the clock every game minute. Rebuild only the window overlay
+       and palettes when crossing the day/night boundary. */
+    drawClockPanel();
+    if (wasDaytime != isDaytime)
+    {
+        updateRoomLighting();
+        updateSkySprite();
+        if (!drawMorningWindow())
+            showFatalError("WINDOW UPDATE ERROR");
+    }
+}
+
 static void showRoomMessage(const char *message, u16 frames)
 {
     drawMessagePanel(message);
@@ -646,6 +680,7 @@ static void wakeFromSleep(void)
     isMorning = TRUE;
     clockHour = 7;
     clockMinute = 0;
+    minuteFrameCounter = 0;
     lampOn = FALSE;
     updateRoomLighting();
     updateSkySprite();
@@ -704,6 +739,7 @@ static bool startGame(void)
     isMorning = FALSE;
     clockHour = 19;
     clockMinute = 45;
+    minuteFrameCounter = 0;
     messageTimer = 0;
     sleepTimer = 0;
     lastPrompt = 255;
@@ -825,6 +861,7 @@ int main(bool hardReset)
     isMorning = FALSE;
     clockHour = 19;
     clockMinute = 45;
+    minuteFrameCounter = 0;
     messageTimer = 0;
     sleepTimer = 0;
     lastPrompt = 255;
@@ -953,6 +990,9 @@ int main(bool hardReset)
                     interactWithObject(nearby);
                 }
             }
+
+            if (sleepTimer == 0)
+                updateGameClock();
 
             if (messageTimer > 0)
             {
