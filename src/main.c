@@ -7,7 +7,7 @@
 #define PLAYER_MAX_Y 104
 #define PLAYER_SPEED 2
 #define SPRITE_VRAM_TILES 128
-#define RU_GLYPH_COUNT 75
+#define RU_GLYPH_COUNT 51
 #define PHONE_TILE_BASE TILE_USER_INDEX
 #define PHONE_TILE_COUNT 16
 #define PHONE_WIDTH 20
@@ -191,10 +191,11 @@ static s16 russianGlyph(u16 cp)
     if(cp==':')return 34;
     if(cp=='-')return 35;
     if(cp=='.')return 36;
-    if(cp>='A' && cp<='Z')return (s16)(37u+(cp-'A'));
-    if(cp>='0' && cp<='9')return (s16)(63u+(cp-'0'));
-    if(cp=='*')return 73;
-    if(cp=='#')return 74;
+    if(cp=='X')return 37;
+    if(cp=='C')return 38;
+    if(cp>='0' && cp<='9')return (s16)(39u+(cp-'0'));
+    if(cp=='*')return 49;
+    if(cp=='#')return 50;
     return -1;
 }
 
@@ -287,7 +288,7 @@ static void drawControls(void)
     clearMenuText();
     drawCenteredRussian("УПРАВЛЕНИЕ",18,FALSE);
     drawCenteredRussian("СТРЕЛКИ: ДВИЖЕНИЕ",21,FALSE);
-    drawCenteredRussian("START: ОТКРЫТЬ ТЕЛЕФОН",23,FALSE);
+    drawCenteredRussian("СТАРТ: ОТКРЫТЬ ТЕЛЕФОН",23,FALSE);
     drawCenteredRussian("X: ВЫБРАТЬ КОНТАКТ",25,FALSE);
     drawCenteredRussian("C: НАЗАД В ЧАТЕ",27,FALSE);
 }
@@ -490,7 +491,7 @@ static void drawPhoneContacts(void)
     drawRussianText("КОНТАКТЫ",(u16)(px+6),(u16)(py+3),FALSE);
     drawRussianText("> ЮКИ",(u16)(px+5),(u16)(py+5),FALSE);
     drawRussianText("X: ВЫБРАТЬ",(u16)(px+4),(u16)(py+8),FALSE);
-    drawRussianText("START: ВЫХОД",(u16)(px+4),(u16)(py+9),FALSE);
+    drawRussianText("СТАРТ: ВЫХОД",(u16)(px+4),(u16)(py+9),FALSE);
 }
 
 static void drawPhoneChat(void)
@@ -591,8 +592,7 @@ int main(bool hardReset)
             {
                 gameState=STATE_PHONE_CONTACTS;
                 YunoMeta_setVisible(FALSE);
-                if(!drawPhoneBase())drawCenteredRussian("ОШИБКА ПАМЯТИ ТЕЛЕФОНА",13,TRUE);
-                else drawPhoneContacts();
+                drawPhoneContacts();
             }
             else movePlayer(pad);
         }
