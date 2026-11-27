@@ -372,10 +372,11 @@ static bool drawPhoneImage(void)
 
     VDP_setEnable(FALSE);
     VDP_clearPlane(BG_A,TRUE);
+    VDP_clearPlane(BG_B,TRUE);
     VDP_setBackgroundColor(0);
 
-    if(!VDP_drawImageEx(BG_A,&phone_ui,
-        TILE_ATTR_FULL(PAL1,TRUE,FALSE,FALSE,TILE_USER_INDEX),
+    if(!VDP_drawImageEx(BG_B,&phone_ui,
+        TILE_ATTR_FULL(PAL1,FALSE,FALSE,FALSE,TILE_USER_INDEX),
         px,py,TRUE,TRUE))
     {
         VDP_waitDMACompletion();
