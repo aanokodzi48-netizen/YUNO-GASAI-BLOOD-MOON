@@ -128,7 +128,7 @@ static void buildRussianFont(void)
                 u8 pixel=(ruGlyphRows[g][row]&(1u<<(7u-col)))?15:0;
                 u16 offset=(u16)(g*32u+row*4u+(col>>1));
                 if((col&1u)==0) dst[offset]=(u8)(pixel<<4);
-                else dst[offset]|=pixel;
+                else dst[offset]=(u8)((dst[offset]&0xF0u)|pixel);
             }
         }
     }
