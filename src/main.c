@@ -509,8 +509,12 @@ int main(bool hardReset)
         {
             if(pressed&BUTTON_START)
             {
-                gameState=STATE_PHONE_CONTACTS;
+                /* Commit sprite hiding before the phone planes are revealed.
+                   Otherwise the previous visible SAT can flash Yuno over the phone. */
                 YunoMeta_setVisible(FALSE);
+                SPR_update();
+                VDP_waitDMACompletion();
+                gameState=STATE_PHONE_CONTACTS;
                 drawPhoneContacts();
             }
             else movePlayer(pad);
