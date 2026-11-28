@@ -1,11 +1,11 @@
 name: Build Mega Drive ROM
 on:
   push:
-    branches: [ main ]
+    branches: [ main, integrate/yuno-metasprite ]
   pull_request:
   workflow_dispatch:
 concurrency:
-  group: md-rom-build-${{ github.ref }}
+  group: md-rom-build-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 permissions:
