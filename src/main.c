@@ -513,7 +513,8 @@ int main(bool hardReset)
                    Otherwise the previous visible SAT can flash Yuno over the phone. */
                 YunoMeta_setVisible(FALSE);
                 SPR_update();
-                VDP_waitDMACompletion();
+                /* SPR_update queues SAT DMA; VBlank processing commits it. */
+                SYS_doVBlankProcess();
                 gameState=STATE_PHONE_CONTACTS;
                 drawPhoneContacts();
             }

@@ -19,6 +19,7 @@ required = {
     "phone user VRAM base": "TILE_USER_INDEX",
     "sprite VRAM boundary": "TILE_SPRITE_INDEX",
     "Yuno hidden on phone": "YunoMeta_setVisible(FALSE)",
+    "queued SAT DMA flushed at VBlank": "SYS_doVBlankProcess()",
     "Yuno restored on close": "YunoMeta_setVisible(TRUE)",
 }
 for label, token in required.items():
@@ -31,6 +32,10 @@ for forbidden in (
 ):
     if forbidden in source:
         raise SystemExit(f"FAIL: obsolete speed selector or primitive phone code remains: {forbidden}")
+
+pause_start = source.index("YunoMeta_setVisible(FALSE);", source.index("else if(gameState==STATE_PLAYING)"))
+if not (source.index("SPR_update();", pause_start) < source.index("SYS_doVBlankProcess();", pause_start) < source.index("drawPhoneContacts();", pause_start)):
+    raise SystemExit("FAIL: phone must not be drawn until hidden sprite-table DMA is flushed")
 
 if source.count("if(pressed&BUTTON_START)closePhone();") != 2:
     raise SystemExit("FAIL: START must close the phone from contacts and chat")
