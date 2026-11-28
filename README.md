@@ -1,30 +1,47 @@
-# YUNO GASAI: BLOOD MOON
+# ЮНО ГАСАЙ: КРОВАВАЯ ЛУНА
 
-A Mega Drive / Genesis game prototype built with SGDK.
+Игра для Sega Mega Drive / Genesis на SGDK.
 
-## Current flow
+## Главное меню
 
-1. Static title splash with PRESS START.
-2. Main menu with START and SETTINGS.
-3. START opens a plain white playfield with Yuno.
+- Заставка: «НАЖМИТЕ СТАРТ».
+- Главное меню: «СТАРТ» и «УПРАВЛЕНИЕ».
+- Все видимые игровые надписи, меню и сообщения об ошибках отображаются русским пиксельным шрифтом.
+- Выбор скорости и отдельная кнопка бега удалены. Перемещение выполняется с постоянным шагом 2 пикселя за кадр.
 
-## Current playable test scene
+## Управление
 
-- Solid white background across the playfield.
-- No room image, wall, floor, furniture, clock, time-of-day system, GIF or intro animation.
-- Yuno can move freely in four directions with the D-pad.
-- The configured RUN button increases movement speed.
-- START opens the pause menu; B returns to the main menu.
+- Крестовина — перемещение Юно.
+- START во время игры — открыть телефон и приостановить игру.
+- X на шестикнопочном контроллере — выбрать контакт «Юки».
+- C внутри чата — вернуться к списку контактов.
+- START на любом экране телефона — закрыть телефон и продолжить игру.
+- C в игровом процессе не занят телефоном и может быть назначен на удар ногой позднее.
 
-The current small placeholder Yuno sprite is intentionally unchanged. A larger
-character sprite, room art, time system, interactions, and audio are not part
-of this test build yet.
+Для работы X в MD.emu должен быть выбран шестикнопочный контроллер.
 
-## Build and download
+## Телефон
 
-GitHub Actions builds SGDK with the Marsdev toolchain. A successful run
-publishes the ROM, checksum and MD.emu ZIP as workflow artifacts.
+- Пауза оформлена как раскрытая бирюзовая раскладушка с тёмной окантовкой, экраном, шарниром, динамиком и чёрной цифровой клавиатурой.
+- Корпус телефона — отдельный пиксельный ресурс `res/phone_ui.png` размером 128×192: 4-битная indexed PNG, до 15 цветов и прозрачный индекс 0.
+- Изображение телефона выводится на BG_B; текст контактов и чата накладывается на переднем плане на BG_A с высоким приоритетом.
+- На экране контактов отображается выделенный контакт «ЮКИ».
+- X открывает пустой чат с Юки; сообщения пока не добавлены.
+- C возвращает из чата к контактам, но не закрывает телефон.
+- START закрывает телефон и возвращает игру к прежним координатам Юно.
+- Во время телефона Юно скрыта, чтобы не перекрывать интерфейс; её позиция и состояние игры сохраняются.
+- Интерфейс телефона выводится высокоприоритетными тайлами BG_A.
 
-Expected ROM output: `out/rom.bin`.
+## Игровая сцена и Юно
 
-A successful build still needs an emulator play-test before it can be called tested.
+- Юно собрана из шести аппаратных частей в метаспрайт размером 40×120 пикселей.
+- Части используют общую 4-битную палитру PAL3 с прозрачным индексом 0.
+- Телефон использует фоновую графику и не расходует дополнительные аппаратные спрайты.
+
+## Ресурсы и сборка
+
+- Сборка ROM выполняется через SGDK/Marsdev в GitHub Actions.
+- Проверка графики: `tools/validate_assets.py` и `tools/validate_yuno_assets.py`.
+- Проверка меню, шрифта и переходов телефона: `tools/validate_game_ui.py`.
+- После успешной сборки ROM и ZIP публикуются как артефакты GitHub Actions.
+- Сборка подтверждает компиляцию; окончательная проверка внешнего вида и управления выполняется запуском ROM в MD.emu.
